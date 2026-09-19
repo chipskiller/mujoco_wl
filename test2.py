@@ -53,7 +53,8 @@ with mujoco.viewer.launch_passive(model, data) as viewer:
         mujoco.mj_step(model, data)
         viewer.sync()
 
-        # 对齐物理时间：如果这步跑得太快，就休眠等待
-        elapsed = time.perf_counter() - step_start
-        if elapsed < dt:
-            time.sleep(dt - elapsed)
+        # 对齐物理时间（Windows 上 time.sleep 精度 ~15ms，用忙等待兜底）
+        while time.perf_counter() - step_start < dt:
+            remaining = dt - (time.perf_counter() - step_start)
+            if remaining > 0.002:
+                time.sleep(remaining * 0.9)
