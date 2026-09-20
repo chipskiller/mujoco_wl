@@ -1,77 +1,50 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- ================================================================
-     步兵机器人 V4 模型 (LQR 版)
-     ================================================================
-     这是一个四轮差速底盘机器人，前后各有一套悬挂系统。
-     主要用于 MuJoCo 仿真中的运动控制、LQR 平衡控制等。
+<!--
+步兵机器人 V4 模型 (LQR 版)
+=============================
+四轮差速底盘机器人，前后各有一套悬挂系统。
+主要用于 MuJoCo 仿真中的运动控制、LQR 平衡控制等。
 
-     模型结构总览（运动树）：
-     ┌─────────────────────────────────────────────────────┐
-     │                 base_Link_del（车身）               │
-     │   ┌─────── freejoint ───────┐                      │
-     │   │  (x, y, z, qw, qx, qy, qz) 自由运动           │
-     │   │  IMU: imu_site                                 │
-     │   ├── rf0_Link ── rf1_Link ── r_wheel_Link (右前)  │
-     │   ├── lf0_Link ── lf1_Link ── l_wheel_Link (左前)  │
-     │   ├── r20_Link ── r21_Link ── r22_Link ── r23_Link │
-     │   │   (右后悬挂四连杆)                               │
-     │   └── l20_Link ── l21_Link ── l22_Link ── l23_Link │
-     │       (左后悬挂四连杆)                               │
-     └─────────────────────────────────────────────────────┘
-     ================================================================ -->
-
+模型结构总览（运动树）：
+base_Link_del（车身，freejoint 自由运动，挂载 IMU）
+├── rf0_Link ── rf1_Link ── r_wheel_Link（右前悬挂 + 轮）
+├── lf0_Link ── lf1_Link ── l_wheel_Link（左前悬挂 + 轮）
+├── r20_Link ── r21_Link ── r22_Link ── r23_Link（右后四连杆悬挂）
+└── l20_Link ── l21_Link ── l22_Link ── l23_Link（左后四连杆悬挂）
+-->
 <mujoco model="infantry_V2">
-  <!-- ============================================================
-       编译器选项
-       ============================================================ -->
-  <compiler angle="radian"/>   <!-- XML 中所有角度单位是弧度，非角度 -->
+  <compiler angle="radian"/>
 
-  <!-- ============================================================
-       默认属性
-       ============================================================ -->
   <default>
-    <!--
-      contype="1"  : 机器人 geom 属于碰撞组 1
-      conaffinity="2" : 只跟碰撞组 2 的地面/障碍物碰撞，不跟机器人互撞
-      这样机器人各部件之间不会相互碰撞产生奇怪的力。
-    -->
+    <!-- contype/conaffinity: 机器人 geom 只跟环境(组2)碰撞，不自碰撞 -->
     <geom contype="1" conaffinity="2"/>
   </default>
 
-  <!-- ============================================================
-       资源资产：网格（3D 模型）、材质、纹理、地形
-       ============================================================ -->
   <asset>
-    <!--
-      mesh = 3D 网格（STL 格式），定义机器人每个零件的几何外形。
-      file 路径相对于当前 XML 文件所在目录。
-    -->
-    <!-- ── 车身 ── -->
+    <!-- 车身 -->
     <mesh name="base_Link_del" file="base_Link_del.STL"/>
 
-    <!-- ── 右前悬挂 ── -->
-    <mesh name="rf0_Link"  file="rf0_Link.STL"/>
-    <mesh name="rf1_Link"  file="rf1_Link.STL"/>
-    <mesh name="r_wheel_Link" file="r_wheel_Link.STL"/>   <!-- 右轮 -->
+    <!-- 右前悬挂 -->
+    <mesh name="rf0_Link"      file="rf0_Link.STL"/>
+    <mesh name="rf1_Link"      file="rf1_Link.STL"/>
+    <mesh name="r_wheel_Link"  file="r_wheel_Link.STL"/><!-- 右轮 -->
 
-    <!-- ── 左前悬挂 ── -->
-    <mesh name="lf0_Link"  file="lf0_Link.STL"/>
-    <mesh name="lf1_Link"  file="lf1_Link.STL"/>
-    <mesh name="l_wheel_Link" file="l_wheel_Link.STL"/>   <!-- 左轮 -->
+    <!-- 左前悬挂 -->
+    <mesh name="lf0_Link"      file="lf0_Link.STL"/>
+    <mesh name="lf1_Link"      file="lf1_Link.STL"/>
+    <mesh name="l_wheel_Link"  file="l_wheel_Link.STL"/><!-- 左轮 -->
 
-    <!-- ── 右后四连杆悬挂 ── -->
+    <!-- 右后四连杆 -->
     <mesh name="r20_Link" file="r20_Link.STL"/>
     <mesh name="r21_Link" file="r21_Link.STL"/>
     <mesh name="r22_Link" file="r22_Link.STL"/>
     <mesh name="r23_Link" file="r23_Link.STL"/>
 
-    <!-- ── 左后四连杆悬挂 ── -->
+    <!-- 左后四连杆 -->
     <mesh name="l20_Link" file="l20_Link.STL"/>
     <mesh name="l21_Link" file="l21_Link.STL"/>
     <mesh name="l22_Link" file="l22_Link.STL"/>
     <mesh name="l23_Link" file="l23_Link.STL"/>
 
-    <!-- ── 材质和纹理 ── -->
     <material name="floor_gray"
           rgba="0.65 0.65 0.65 1"
           specular="0.15"
@@ -81,34 +54,29 @@
            type="2d"
            builtin="checker"
            width="512" height="512"
-           rgb1="0.2 0.4 0.9"    <!-- 蓝色 -->
-           rgb2="0.8 0.9 1.0"/>   <!-- 浅蓝 -->
+           rgb1="0.2 0.4 0.9"
+           rgb2="0.8 0.9 1.0"/>
 
     <material name="blue_checker_mat"
             texture="blue_checker_tex"
-            texrepeat="20 20"     <!-- 重复 20×20 次 -->
+            texrepeat="20 20"
             reflectance="0.1"/>
 
-    <!-- ── 地形高度图 ── -->
+    <!-- 地形高度图 size=[水平长, 水平宽, 最大高度, 底部厚] -->
     <hfield name="terrain_hf"
             file="terrain_hfield.png"
             size="3.2 2.4 0.45 0.06"/>
-    <!-- size 参数: [水平长度, 水平宽度, 最大高度, 底部厚度]
-         这里地形范围 3.2×2.4 m，高度 0~0.45 m，底部 0.06 m -->
   </asset>
 
-  <!-- ============================================================
-       世界 / 环境
-       ============================================================ -->
   <worldbody>
-    <!-- ── 地面：巨大的平面 ── -->
+    <!-- 地面 condim="3" = 法向力 + 切向摩擦力 -->
     <geom name="floor" type="plane" size="40 40 0.1"
       material="blue_checker_mat"
-      contype="2" conaffinity="1"   <!-- 机器人 conaffinity=2 才能碰撞 -->
-      condim="3"                    <!-- 3 维接触：法向力 + 切向摩擦力 -->
-      friction="2.0 0.02 0.0005"/>  <!-- [滑动摩擦, 扭转摩擦, 滚动摩擦] -->
+      contype="2" conaffinity="1"
+      condim="3"
+      friction="2.0 0.02 0.0005"/>
 
-    <!-- ── 20cm 台阶 ── -->
+    <!-- 20cm 台阶 -->
     <geom name="step_20cm"
         type="box"
         pos="-10.0 0.0 0.10"
@@ -118,11 +86,11 @@
         condim="3"
         friction="2.0 0.02 0.0005"/>
 
-    <!-- ── 飞坡（斜面上坡） ── -->
+    <!-- 飞坡 euler 绕 Y 轴旋转 ~17° -->
     <geom name="fly_ramp"
         type="box"
         pos="-5.4456 0.0 0.2765"
-        euler="0 0.296706 0"       <!-- 绕 Y 轴旋转 ≈17° 倾斜 -->
+        euler="0 0.296706 0"
         size="0.9457 4 0.1"
         rgba="0.6 0.6 0.6 1"
         contype="2" conaffinity="1"
@@ -138,7 +106,7 @@
         condim="3"
         friction="2.0 0.02 0.0005"/>
 
-    <!-- ── 地形（高度图） ── -->
+    <!-- 高度图地形 -->
     <geom name="terrain_hfield"
         type="hfield"
         hfield="terrain_hf"
@@ -148,104 +116,63 @@
         condim="3"
         friction="2.0 0.02 0.0005"/>
 
-    <!-- ============================================================
-         机器人本体
-         ============================================================
-         pos / quat : 在世界坐标系中的初始位置和朝向
-         这里 pos="0 0 0.25" → 地板上方 25cm -->
+    <!-- ======================= 机器人本体 ======================= -->
     <body name="base_Link_del" pos="0 0 0.25" quat="0 0 0 1">
-
-      <!--
-        freejoint：最重要的关节！
-        允许车身在空间中 6 自由度自由运动（平移 xyz + 旋转四元数）。
-        这是机器人的根关节，有了它机器人才能在场景中移动。
-      -->
+      <!-- freejoint: 6 自由度自由运动（x,y,z + 四元数旋转） -->
       <freejoint/>
-
-      <!-- ── 质量 / 惯量 ── -->
       <inertial
-        pos="-0.00406060 0.0008523 0.09714204"   <!-- 质心相对 body 原点的偏移 -->
-        mass="14.528116"                          <!-- 车身质量 14.5 kg -->
-        fullinertia="0.28353 0.35249 0.3701       <!-- 完整惯量矩阵 Ixx Iyy Izz Ixy Ixz Iyz -->
-                     -0.00174358 -0.00825907 -0.00214156"/>
+        pos="-0.00406060 0.0008523 0.09714204"
+        mass="14.528116"
+        fullinertia="0.28353 0.35249 0.3701 -0.00174358 -0.00825907 -0.00214156"/>
 
-      <!--
-        site：参考点/挂载点，不参与碰撞，用作传感器或约束的安装位置
-      -->
-      <site name="imu_site" pos="0 0 0" size="0.005"/>  <!-- IMU 安装位置 -->
+      <!-- site 用作传感器或约束的挂载点，不参与碰撞 -->
+      <site name="imu_site" pos="0 0 0" size="0.005"/><!-- IMU 安装位置 -->
 
-      <!-- ── 跟随相机（视角） ── -->
+      <!-- 跟随相机 -->
       <camera name="follow_cam" pos="0 0 0.45" xyaxes="0 1 0 0 0 1" fovy="55"/>
 
-      <!-- ── 车身碰撞体 ──
-           condim="1" → 只在法线方向接触，无摩擦
-           friction="0 0 0" → 无摩擦，避免车身和悬挂之间的异常摩擦力
-           priority="2" → 高优先级碰撞 -->
+      <!-- 车身碰撞体 condim=1 仅有法向接触无摩擦 -->
       <geom name="base_Link_del_geom" type="mesh"
             rgba="1 1 1 1" mesh="base_Link_del"
             priority="2" condim="1" friction="0 0 0"/>
 
-      <!-- ============================================================
-           右前悬挂
-           ============================================================
-           结构：base → rf0_Joint → rf0_Link → rf1_Joint → rf1_Link → r_wheel_Joint → r_wheel_Link
-           朝向：车身右侧（Y 负方向） -->
-
+      <!-- ================== 右前悬挂 ================== -->
       <body name="rf0_Link" pos="0 -0.1877 0.08725" quat="0.707105 0.707108 0 0">
         <inertial pos="0.0552763 -0.0165544 -0.00927161"
                   quat="-0.005176 0.693173 0.0544357 0.718694"
-                  mass="1.1132"        <!-- 1.1 kg -->
+                  mass="1.1132"
                   diaginertia="0.00641833 0.00468513 0.00204569"/>
-        <!--
-          joint: 定义一个旋转关节
-          name="rf0_Joint" ：关节名称，C++ 中通过这个名字查找
-          axis="0 0 1"     ：旋转轴沿 Z 轴（绕垂直轴转动 → 悬挂上下摆）
-          range="-100 100" ：运动范围无限（实际上受限于结构）
-          actuatorfrcrange="-30 30" ：电机最大力范围 ±30 N·m
-        -->
         <joint name="rf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
         <geom type="mesh" rgba="1 1 1 1" mesh="rf0_Link"/>
         <site name="Right_front_site1" pos="0.09435 0 0" size="0.005" rgba="1 0 0 1"/>
         <site name="right_lf0_qitanhuang" pos="0.0155 -0.0445 -0.008" size="0.005" rgba="1 0 0 1"/>
-
         <body name="rf1_Link" pos="0.17472 0 0">
           <inertial pos="-0.00283459 -0.0710676 0.0068255"
                     quat="0.483182 0.50274 -0.490133 0.523027"
-                    mass="0.306873"   <!-- 0.3 kg -->
+                    mass="0.306873"
                     diaginertia="0.0025405 0.00248016 8.5602e-05"/>
-          <!--
-            rf1_Joint：悬挂下摆臂关节
-            limited="true" range="-1.1 0.63" → 限制了摆臂旋转范围（单位：弧度）
-          -->
           <joint name="rf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-1.1 0.63" actuatorfrcrange="-30 30"/>
           <geom type="mesh" rgba="1 1 1 1" mesh="rf1_Link"/>
           <site name="Right_front_site2" pos="-0.0160931 0.0609099 0" size="0.005" rgba="1 0 0 1"/>
           <site name="right_lf1_qitanhuang" pos="0.005 -0.046 -0.005" size="0.01" rgba="1 0 0 1"/>
-
-          <!-- ── 右轮 ── -->
           <body name="r_wheel_Link" pos="0 -0.208 0.016">
             <inertial pos="4.1184e-06 -0.00019289 0.019562"
-                      mass="0.4904"     <!-- 单个轮子 ≈0.5 kg -->
+                      mass="0.4904"
                       fullinertia="0.00033958 0.00034133 0.0005817 0 0 0"/>
-            <!-- 车轮关节：绕 Z 轴旋转 → 驱动机器人前进后退 -->
-            <joint name="r_wheel_Joint" pos="0 0 0" axis="0 0 1"
-                   actuatorfrcrange="-30 30"/>
-            <!-- 用 mesh 显示轮子的 3D 形状 -->
+            <joint name="r_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <geom type="mesh" rgba="1 1 1 1" mesh="r_wheel_Link"/>
           </body>
         </body>
       </body>
 
-      <!-- ============================================================
-           左前悬挂（对称结构，Y 正方向）
-           ============================================================ -->
+      <!-- ================== 左前悬挂 ================== -->
       <body name="lf0_Link" pos="0 0.1877 0.08725" quat="0.707105 -0.707108 0 0">
-        <!-- 与右侧对称，参数基本一致，只是 Y 方向相反 -->
         <inertial pos="0.055403 0.016584 -0.0092702"
                   quat="0.00463484 0.693099 -0.0538381 0.718814"
-                  mass="1.1128" diaginertia="0.00641157 0.0046755 0.00204815"/>
+                  mass="1.1128"
+                  diaginertia="0.00641157 0.0046755 0.00204815"/>
         <joint name="lf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
         <geom type="mesh" rgba="1 1 1 1" mesh="lf0_Link"/>
@@ -254,8 +181,8 @@
         <body name="lf1_Link" pos="0.17472 0 0">
           <inertial pos="-0.0028358 0.071068 0.0068255"
                     quat="0.50274 0.483182 -0.523027 0.490133"
-                    mass="0.30687" diaginertia="0.0025405 0.00248016 8.5602e-05"/>
-          <!-- 注意 range 跟右侧相反：左侧悬挂的下限 -0.63，而上限 1.1 -->
+                    mass="0.30687"
+                    diaginertia="0.0025405 0.00248016 8.5602e-05"/>
           <joint name="lf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-0.63 1.1" actuatorfrcrange="-30 30"/>
           <geom type="mesh" rgba="1 1 1 1" mesh="lf1_Link"/>
@@ -263,42 +190,43 @@
           <site name="left_lf1_qitanhuang" pos="0.005 0.046 -0.005" size="0.01" rgba="1 0 0 1"/>
           <body name="l_wheel_Link" pos="0 0.208 0.016">
             <inertial pos="-4.1184e-06 0.00019289 0.019562"
-                      mass="0.4904" fullinertia="0.00033958 0.00034133 0.0005817 0 0 0"/>
+                      mass="0.4904"
+                      fullinertia="0.00033958 0.00034133 0.0005817 0 0 0"/>
             <joint name="l_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <geom type="mesh" rgba="1 1 1 1" mesh="l_wheel_Link"/>
           </body>
         </body>
       </body>
 
-      <!-- ============================================================
-           右后四连杆悬挂
-           ============================================================
-           结构：base → r20 → r21 → r22 → r23
-           这是一个四连杆机构，用于后轮的悬挂和减震 -->
+      <!-- ================== 右后四连杆 ================== -->
       <body name="r20_Link" pos="0 -0.1877 0.08725" quat="0.707105 0.707108 0 0">
         <inertial pos="-0.0077129 -0.044014 0.0053168"
                   quat="0.54287 0.453598 -0.539995 0.456012"
-                  mass="0.058433" diaginertia="0.000101653 9.09634e-05 1.15321e-05"/>
+                  mass="0.058433"
+                  diaginertia="0.000101653 9.09634e-05 1.15321e-05"/>
         <joint name="r20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
         <geom type="mesh" rgba="1 1 1 1" mesh="r20_Link"/>
         <body name="r21_Link" pos="-0.016285 -0.092933 0.01">
           <inertial pos="0.05374 -0.013258 -0.01451"
                     quat="0.0690441 0.704772 -0.0560118 0.70384"
-                    mass="0.042999" diaginertia="7.83158e-05 7.61359e-05 2.77956e-06"/>
+                    mass="0.042999"
+                    diaginertia="7.83158e-05 7.61359e-05 2.77956e-06"/>
           <joint name="r21_Link" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
           <geom type="mesh" rgba="1 1 1 1" mesh="r21_Link"/>
           <body name="r22_Link" pos="0.11063 -0.019387 0">
             <inertial pos="-0.006381 0.08888 -0.0045"
                       quat="0.475753 0.523125 -0.475753 0.523125"
-                      mass="0.065877" diaginertia="0.00021104 0.000205523 6.41108e-06"/>
+                      mass="0.065877"
+                      diaginertia="0.00021104 0.000205523 6.41108e-06"/>
             <joint name="r22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <geom type="mesh" rgba="1 1 1 1" mesh="r22_Link"/>
             <site name="Right_rear_site1" pos="0 0.11232 0" size="0.005" rgba="1 1 0 1"/>
             <body name="r23_Link" pos="-0.018032 0.17268 0">
               <inertial pos="0.040186 0 -0.014509"
                         quat="0 0.707107 0 0.707107"
-                        mass="0.010945" diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
+                        mass="0.010945"
+                        diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
               <joint name="r23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
               <geom type="mesh" rgba="1 1 1 1" mesh="r23_Link"/>
               <site name="Right_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
@@ -307,33 +235,35 @@
         </body>
       </body>
 
-      <!-- ============================================================
-           左后四连杆悬挂（对称）
-           ============================================================ -->
+      <!-- ================== 左后四连杆 ================== -->
       <body name="l20_Link" pos="0 0.1877 0.08725" quat="0.707105 -0.707108 0 0">
         <inertial pos="-0.0077129 -0.044014 0.0053168"
                   quat="-0.066476 0.705194 0.0534809 0.703863"
-                  mass="0.058433" diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
+                  mass="0.058433"
+                  diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
         <joint name="l20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
         <geom type="mesh" rgba="1 1 1 1" mesh="l20_Link"/>
         <body name="l21_Link" pos="-0.016285 0.092933 0.01">
           <inertial pos="0.055588 0.013582 -0.01451"
                     quat="-0.066476 0.705194 0.0534809 0.703863"
-                    mass="0.042999" diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
+                    mass="0.042999"
+                    diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
           <joint name="l21_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
           <geom type="mesh" rgba="1 1 1 1" mesh="l21_Link"/>
           <body name="l22_Link" pos="0.11063 0.019387 0">
             <inertial pos="-0.006381 -0.08888 -0.0045"
                       quat="0.523125 0.475753 -0.523125 0.475753"
-                      mass="0.065877" diaginertia="0.00021104 0.000205523 6.41108e-06"/>
+                      mass="0.065877"
+                      diaginertia="0.00021104 0.000205523 6.41108e-06"/>
             <joint name="l22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <geom type="mesh" rgba="1 1 1 1" mesh="l22_Link"/>
             <site name="Left_rear_site1" pos="0 -0.11232 0" size="0.005" rgba="1 1 0 1"/>
             <body name="l23_Link" pos="-0.018032 -0.17268 0">
               <inertial pos="0.040186 0 -0.014509"
                         quat="0 0.707107 0 0.707107"
-                        mass="0.010945" diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
+                        mass="0.010945"
+                        diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
               <joint name="l23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
               <geom type="mesh" rgba="1 1 1 1" mesh="l23_Link"/>
               <site name="Left_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
@@ -341,72 +271,50 @@
           </body>
         </body>
       </body>
-    </body>  <!-- /base_Link_del -->
+    </body>
   </worldbody>
 
-  <!-- ============================================================
-       腱（tendon）
-       ============================================================
-       模拟弹簧/减震器/履带张力，连接两个 site 产生拉力。
-       这里用于前悬挂的减震弹簧。 -->
+  <!-- tendon = 弹簧/减震器，连接两 site 产生拉力 -->
   <tendon>
-    <!-- 左侧减震：连接 left_lf0_qitanhuang 和 left_lf1_qitanhuang -->
     <spatial name="Left_loop1_tendon" width="0.001">
       <site site="left_lf1_qitanhuang"/>
       <site site="left_lf0_qitanhuang"/>
     </spatial>
-
-    <!-- 右侧减震：连接 right_lf1_qitanhuang 和 right_lf0_qitanhuang -->
     <spatial name="Right_loop1_tendon" width="0.001">
       <site site="right_lf1_qitanhuang"/>
       <site site="right_lf0_qitanhuang"/>
     </spatial>
   </tendon>
 
-  <!-- ============================================================
-       执行器（Actuator）/ 电机
-       ============================================================
-       这是控制接口！在 C++ 中通过 data->ctrl[index] 控制。
-       所有电机类型都是 motor = 力矩控制。 -->
+  <!--
+    actuator = 电机/执行器
+    C++ 中通过 data->ctrl[actuator_id] 控制
+    轮子电机范围大(±500)，悬挂电机范围小(±100)
+  -->
   <actuator>
-    <!-- ── 左前悬挂电机 ── -->
     <motor name="act_lf0" joint="lf0_Joint" gear="1" ctrlrange="-100 100"/>
     <motor name="act_lf1" joint="lf1_Joint" gear="1" ctrlrange="-100 100"/>
-    <!-- ── 左轮电机（驱动轮） ──
-         ctrlrange 范围最大，因为轮子需要大扭矩驱动整车 -->
     <motor name="act_lw"  joint="l_wheel_Joint" gear="1" ctrlrange="-500 500"/>
-
-    <!-- ── 右前悬挂电机 ── -->
     <motor name="act_rf0" joint="rf0_Joint" gear="1" ctrlrange="-100 100"/>
     <motor name="act_rf1" joint="rf1_Joint" gear="1" ctrlrange="-100 100"/>
-    <!-- ── 右轮电机 ── -->
     <motor name="act_rw"  joint="r_wheel_Joint" gear="1" ctrlrange="-500 500"/>
-
-    <!-- ── 后悬挂四连杆电机 ── -->
     <motor name="act_lf20" joint="l20_Joint" gear="1" ctrlrange="-100 100"/>
     <motor name="act_rf20" joint="r20_Joint" gear="1" ctrlrange="-100 100"/>
-
-    <!-- ── 减震张力电机（驱动 tendon） ──
-         ctrlrange="0 350" → 只能拉不能推，模拟弹簧预紧力 -->
     <motor name="Left_loop1_motor"  tendon="Left_loop1_tendon"  gear="1" ctrlrange="0 350"/>
     <motor name="Right_loop1_motor" tendon="Right_loop1_tendon" gear="1" ctrlrange="0 350"/>
   </actuator>
 
-  <!-- ============================================================
-       传感器（Sensor）
-       ============================================================
-       这是"状态观测器"！在 C++ 中通过 data->sensordata[adr] 读取。
-       adr = model->sensor_adr[sensor_id] -->
+  <!--
+    sensor = 传感器
+    C++ 中通过 model->sensor_adr[id] 获取 sensordata 索引
+  -->
   <sensor>
-    <!-- ── IMU 传感器组 ── -->
-    <!-- 姿态四元数（相对于世界坐标系） -->
+    <!-- IMU: 姿态四元数、角速度、线加速度 -->
     <framequat name="orientation" objtype="body" objname="base_Link_del"/>
-    <!-- 角速度 gyro (rad/s)，在 imu_site 位置测量 -->
     <gyro      name="base_ang_vel" site="imu_site"/>
-    <!-- 线加速度计 (m/s²) -->
     <accelerometer name="base_lin_acc" site="imu_site"/>
 
-    <!-- ── 关节位置传感器（测量关节当前角度，单位 rad） ── -->
+    <!-- 关节位置编码器 (rad) -->
     <jointpos name="lf0_Joint_p"      joint="lf0_Joint"/>
     <jointpos name="lf1_Joint_p"      joint="lf1_Joint"/>
     <jointpos name="l_wheel_Joint_p"  joint="l_wheel_Joint"/>
@@ -414,7 +322,7 @@
     <jointpos name="rf1_Joint_p"      joint="rf1_Joint"/>
     <jointpos name="r_wheel_Joint_p"  joint="r_wheel_Joint"/>
 
-    <!-- ── 关节速度传感器（测量关节当前角速度，单位 rad/s） ── -->
+    <!-- 关节速度传感器 (rad/s) -->
     <jointvel name="lf0_Joint_v"      joint="lf0_Joint"/>
     <jointvel name="lf1_Joint_v"      joint="lf1_Joint"/>
     <jointvel name="l_wheel_Joint_v"  joint="l_wheel_Joint"/>
@@ -423,28 +331,19 @@
     <jointvel name="r_wheel_Joint_v"  joint="r_wheel_Joint"/>
   </sensor>
 
-  <!-- ============================================================
-       等式约束（Equality Constraint）
-       ============================================================
-       将两个 site 用"虚拟绳索"连接起来，形成闭链机构。
-       这里把前后悬挂的 site 点连接起来，形成履带/履带的约束。 -->
+  <!-- equality constraint = 虚拟绳索连接，形成闭链 -->
   <equality>
-    <!-- 左侧：前悬挂 site1 ↔ 后悬挂 site1 -->
     <connect name="Left_loop1"
              site1="Left_front_site1" site2="Left_rear_site1"
              solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <!-- 左侧：前悬挂 site2 ↔ 后悬挂 site2 -->
     <connect name="Left_loop2"
              site1="Left_front_site2" site2="Left_rear_site2"
              solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <!-- 右侧：前悬挂 site1 ↔ 后悬挂 site1 -->
     <connect name="Right_loop1"
              site1="Right_front_site1" site2="Right_rear_site1"
              solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <!-- 右侧：前悬挂 site2 ↔ 后悬挂 site2 -->
     <connect name="Right_loop2"
              site1="Right_front_site2" site2="Right_rear_site2"
              solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
   </equality>
-
 </mujoco>
