@@ -207,19 +207,70 @@ def main():
         # 每 200 帧 (≈ 1 秒, dt=0.001, N_SUBSTEPS=5) 打印一次传感器数据
         print_interval = 200
 
+        # ── while 循环: Python 条件循环语法 ──
+        #     viewer.is_running():
+        #       类型: mujoco.viewer.Handle 的方法 (返回 bool)
+        #       作用: 判断 MuJoCo Viewer 窗口是否还开着
+        #       实现: 内部检查 GLFW 窗口的关闭标志
+        #       返回: True=窗口开着, False=用户点了关闭
+        #     当 is_running() 返回 False 时, while 退出,
+        #     程序进入清理阶段 (关闭键盘监听, 打印结束信息)
+        # ============================================================
         while viewer.is_running():
+            # ── time.perf_counter(): 高精度时间戳 ──
+            #     类型: Python 标准库 time 模块的函数
+            #     作用: 获取当前时间, 精度约 1 微秒 (μs)
+            #     返回: float, 表示从某个参考点经过的秒数
+            #     用途: 在循环开始和结束时各取一次, 差值 = 本帧耗时
+            #     对比: time.time() 精度 ~1ms, time.perf_counter() ~1μs
+            #     所以用 perf_counter 做毫秒级的时间同步更精确
             step_start = time.perf_counter()
 
             # ── 6a. 读传感器: data.sensordata → numpy 数组 ──
             #         sensor_arr 会作为 C++ compute() 的输入
             sensor_arr[:] = data.sensordata
 
-            # ── 6b. 调用 C++ 控制器 ──
-            #         Python 传四个参数给 C++:
-            #           sensor_arr → 传感器数据
-            #           ctrl_arr   → C++ 在此写入控制量
-            #           model.nsensordata / model.nu → 数组长度
-            #           keys       → WASD 键盘状态
+            # ── 6b. 调用 C++ 控制器 compute() ──
+            #     这里调用的是 infantry_controller.dll 中导出的 compute() 函数
+            #     Python 将数据指针传给 C++, C++ 直接读写内存, 零拷贝开销
+            #
+            #     传给 C++ 的 5 个参数详解:
+            #
+            #     ① sensor_arr (double*, 输入)
+            #        内容: MuJoCo 当前帧的全部传感器数据, 一维数组
+            #        数据源: data.sensordata (mjData.sensordata)
+            #        具体包含(按索引):
+            #          [0-3]   imu 姿态四元数 (w,x,y,z)
+            #          [4-6]   imu 角速度 (gx,gy,gz) rad/s
+            #          [7-9]   imu 加速度 (ax,ay,az) m/s²
+            #          [10-15] 6 个悬挂关节角度 (rad)
+            #          [16-21] 6 个悬挂关节速度 (rad/s)
+            #          [22-23] 左/右轮速度 (rad/s)
+            #        长度: model.nsensordata = 24
+            #        对应 XML 中所有 <sensor> 标签的排列顺序
+            #
+            #     ② ctrl_arr (double*, 输出)
+            #        内容: 全零数组, C++ 在此写入控制量
+            #        返回后包含:
+            #          [0-7]   8 个悬挂电机力矩 (Nm)
+            #          [8-9]   2 个减震器弹簧力 (N)
+            #        长度: model.nu = 10
+            #        对应 XML 中所有 <actuator> 标签的排列顺序
+            #
+            #     ③ n_sensor (int, 输入)
+            #        内容: model.nsensordata = 24
+            #        作用: 告诉 C++ 传感器数组有多长, 防止越界
+            #
+            #     ④ n_act (int, 输入)
+            #        内容: model.nu = 10
+            #        作用: 告诉 C++ 控制量数组有多长
+            #
+            #     ⑤ keys (double*, 输入)
+            #        内容: 4 元素数组 [W, A, S, D]
+            #        值域: 1.0=按下, 0.0=松开
+            #        来源: pynput 全局键盘监听
+            #        对应: w/前进, a/左转, s/后退, d/右转
+            # ============================================================
             ctrl_arr.fill(0.0)
             lib.compute(
                 sensor_arr.ctypes.data_as(
