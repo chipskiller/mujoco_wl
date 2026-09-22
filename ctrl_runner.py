@@ -127,7 +127,9 @@ def main():
     print(f"[加载] 模型: {xml_path}")
     model = mujoco.MjModel.from_xml_path(xml_path)
     data  = mujoco.MjData(model)
-    dt    = model.opt.timestep   # 仿真步长 (秒), 通常 0.002 = 2ms
+    model.opt.timestep = 0.001  # 仿真步长 (秒), 1ms（决定物理精度）
+    dt    = model.opt.timestep
+    N_SUBSTEPS = 5              # 每帧物理推进子步数（渲染频率 = 物理频率/N）
 
     # ============================================================
     #  2. 打印模型接口信息
@@ -202,8 +204,8 @@ def main():
     print("\n[启动] MuJoCo Viewer...")
     with mujoco.viewer.launch_passive(model, data) as viewer:
         step_count = 0
-        # 每 500 步 (约 1 秒) 打印一次传感器数据, 用于调试
-        print_interval = 500
+        # 每 200 帧 (≈ 1 秒, dt=0.001, N_SUBSTEPS=5) 打印一次传感器数据
+        print_interval = 200
 
         while viewer.is_running():
             step_start = time.perf_counter()
@@ -233,13 +235,33 @@ def main():
             # ── 6c. 写入 data.ctrl: MuJoCo 执行器接收控制量 ──
             data.ctrl[:] = ctrl_arr
 
-            # ── 6d. 物理推进一步 ──
-            #         mj_step() 内部: 正向动力学 → 数值积分 → 碰撞检测
-            #         执行器力矩 + 重力 + 接触力 → 更新位置/速度
-            mujoco.mj_step(model, data)
+            # ════════════════════════════════════════════════════
+            #  6d. 物理推进 × N_SUBSTEPS 次
+            #     每个子步都: 读传感器 → C++ 控制 → 写控制量 → mj_step
+            #     这样控制频率 = 1/dt = 1000Hz, 渲染频率降低到 1/(dt*N)
+            # ════════════════════════════════════════════════════
+            for _ in range(N_SUBSTEPS):
+                # 读传感器
+                sensor_arr[:] = data.sensordata
+                # C++ 控制器 (每个子步刷新)
+                ctrl_arr.fill(0.0)
+                lib.compute(
+                    sensor_arr.ctypes.data_as(
+                        ctypes.POINTER(ctypes.c_double)),
+                    ctrl_arr.ctypes.data_as(
+                        ctypes.POINTER(ctypes.c_double)),
+                    model.nsensordata,
+                    model.nu,
+                    kb.get_keys().ctypes.data_as(
+                        ctypes.POINTER(ctypes.c_double)),
+                )
+                # 写入控制量
+                data.ctrl[:] = ctrl_arr
+                # 物理推进 (步长 = model.opt.timestep = 0.001s)
+                mujoco.mj_step(model, data)
 
             # ── 6e. 渲染同步 ──
-            #         把 data 中的位置/姿态更新到 Viewer 画面
+            #         每帧只 sync 一次, 降低渲染开销
             viewer.sync()
 
             # ── 6f. 调试打印 ──
@@ -263,7 +285,7 @@ def main():
             # ── 6g. 时间同步 ──
             #         用 perf_counter() 忙等待, 确保每步耗时精确等于 dt
             #         不这样做的话: 仿真跑得比真实时间快/慢, 运动不自然
-            while time.perf_counter() - step_start < dt:
+            while time.perf_counter() - step_start < dt * N_SUBSTEPS:
                 pass
 
     # ============================================================

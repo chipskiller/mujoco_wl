@@ -116,119 +116,274 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
         condim="3"
         friction="2.0 0.02 0.0005"/>
 
-    <!-- ======================= 机器人本体 ======================= -->
+    <!-- ======================= 机器人本体 =======================
+
+         下面用到的 XML 标签类型说明（MuJoCo 模型定义）:
+
+         ── <body> ──────────────────────────────────────────────
+             刚体节点。每个 body 有自己的位置/姿态/速度，
+             子 body 继承父 body 的变换。
+             参数:
+               name="..."   刚体名字（唯一标识）
+               pos="x y z"  相对于父 body 的位置 (m)
+               quat="w x y z"  相对于父 body 的姿态（四元数）
+
+         ── <freejoint/> ────────────────────────────────────────
+             自由关节。允许 body 在 6 个自由度(xyz+旋转)上完全自由运动。
+             通常用于 base body（如底盘），使其能在空间中自由移动。
+             无参数。
+
+         ── <inertial> ──────────────────────────────────────────
+             刚体的惯性参数（质量、质心、惯量张量）。
+             参数:
+               pos="x y z"      质心在 body 坐标系下的位置 (m)
+               mass="..."       质量 (kg)
+               diaginertia="Ixx Iyy Izz"  对角惯量 (kg*m²)
+               fullinertia="Ixx Iyy Izz Ixy Ixz Iyz"  完整惯量张量
+
+         ── <joint> ─────────────────────────────────────────────
+             关节。定义两个 body 之间的受约束相对运动。
+             参数:
+               name="..."           关节名字
+               pos="x y z"          关节原点位置
+               axis="x y z"         关节轴方向（单位向量）
+               range="min max"      关节运动范围 (rad)，不设=无限制
+               armature="..."       电机转子惯量附加 (kg*m²)
+               actuatorfrcrange="..."  执行器可施加的最大力/力矩
+
+         ── <site> ──────────────────────────────────────────────
+             挂载点/标记点。不参与碰撞，用作传感器安装位置
+             或 equality/tendon 的连接点。
+             参数:
+               name="..."   名字
+               pos="x y z"  位置 (m)
+               size="..."   显示尺寸 (m)
+               rgba="r g b a"  颜色 (0~1)
+
+         ── <camera> ────────────────────────────────────────────
+             相机。定义视角位置和朝向。
+             参数:
+               name="..."    名字
+               pos="x y z"   位置
+               xyaxes="x y z x y z"  前两个轴方向
+               fovy="..."    视场角 (deg)
+
+         ── <geom> ──────────────────────────────────────────────
+             几何体。用于碰撞检测和渲染显示。
+             参数:
+               name="..."     名字
+               type="..."     几何类型（mesh=网格, box=立方体, plane=平面, hfield=高度图, 等）
+               mesh="..."    type=mesh 时指定 STL 网格名
+               pos/size/euler/rgba  位置/尺寸/旋转/颜色
+               condim="..."   接触维度(1=仅法向力, 3=法向+摩擦力)
+               friction="..." 摩擦系数(切向, 滚动, 扭转)
+               priority="..." 碰撞优先级(高值优先)
+               contype/conaffinity  碰撞组别过滤
+
+         ── <tendon> ────────────────────────────────────────────
+             （定义在 robot 外，但控制车身姿态）
+             腱/弹簧，通过连接两个 site 产生拉力。
+             参数:
+               spatial: 空间腱，可弯曲
+               site:    所连接的 site 名字
+               width:   显示宽度
+
+         ── <actuator> ──────────────────────────────────────────
+             （定义在 robot 外，但控制车身运动）
+             执行器/电机。对 joint 或 tendon 施加力/力矩。
+             参数:
+               name="..."      名字
+               joint="..."     控制的关节名
+               tendon="..."    控制的腱名
+               gear="..."      减速比
+               ctrlrange="min max"  控制量范围 (C++ ctrl[i] 的限幅)
+
+         ── <sensor> ────────────────────────────────────────────
+             （定义在 robot 外，但读取车身数据）
+             传感器。将物理量以特定格式输出到 data.sensordata[]。
+             C++ 控制器通过 model.sensor_adr[ID] 索引读取。
+             类型:
+               framequat:      姿态四元数 (w,x,y,z)
+               gyro:           角速度 (gx,gy,gz) rad/s
+               accelerometer:  线加速度 (ax,ay,az) m/s²
+               jointpos:       关节位置 (rad)
+               jointvel:       关节速度 (rad/s)
+
+         ── <equality> ──────────────────────────────────────────
+             （定义在 robot 外，但约束车身结构）
+             等式约束。强制两个 site 位置重合，形成闭链。
+             connect: 用虚拟绳索连接两 site
+             参数:
+               site1/site2: 连接的两个 site
+               solref/solimp: 约束刚度和阻尼
+
+    ============================================================ -->
+    <!-- ============================== -->
+    <!-- [body] 底盘车身, name=base_Link_del, pos=相对于世界坐标(m), quat=姿态四元数 -->
+    <!-- ============================== -->
     <body name="base_Link_del" pos="0 0 0.25" quat="0 0 0 1">
-      <!-- freejoint: 6 自由度自由运动（x,y,z + 四元数旋转） -->
+      <!-- [freejoint] 自由关节, 无参数: 底盘可在 xyz+旋转 6自由度自由运动（浮动基座） -->
       <freejoint/>
+      <!-- [inertial] 底盘车身惯性, pos=质心相对底盘位置(m), mass=质量(kg), fullinertia=完整惯量张量[Ixx Iyy Izz Ixy Ixz Iyz](kg*m²) -->
       <inertial
         pos="-0.00406060 0.0008523 0.09714204"
         mass="14.528116"
         fullinertia="0.28353 0.35249 0.3701 -0.00174358 -0.00825907 -0.00214156"/>
 
-      <!-- site 用作传感器或约束的挂载点，不参与碰撞 -->
-      <site name="imu_site" pos="0 0 0" size="0.005"/><!-- IMU 安装位置 -->
+      <!-- [site] IMU安装挂载点, name=imu_site, pos=底盘原点, size=显示尺寸5mm -->
+      <site name="imu_site" pos="0 0 0" size="0.005"/>
 
-      <!-- 跟随相机 -->
+      <!-- [camera] 跟随相机, name=follow_cam, pos=底盘上方0.45m, xyaxes=前方向量, fovy=视场角55° -->
       <camera name="follow_cam" pos="0 0 0.45" xyaxes="0 1 0 0 0 1" fovy="55"/>
 
-      <!-- 车身碰撞体 condim=1 仅有法向接触无摩擦 -->
+      <!-- [geom] 底盘碰撞体, name=base_Link_del_geom, type=mesh网格, mesh=使用base_Link_del.STL, condim=1仅法向接触(无摩擦) -->
       <geom name="base_Link_del_geom" type="mesh"
             rgba="1 1 1 1" mesh="base_Link_del"
             priority="2" condim="1" friction="0 0 0"/>
 
       <!-- ================== 右前悬挂 ================== -->
+      <!-- [body] 右前悬挂下摆臂, name=rf0_Link, pos=底盘右偏0.188m+上移0.087m, quat=姿态四元数 -->
       <body name="rf0_Link" pos="0 -0.1877 0.08725" quat="0.707105 0.707108 0 0">
+        <!-- [inertial] 右前下摆臂惯性, pos=质心位置, quat=姿态, mass=质量1.1132kg, diaginertia=对角惯量[Ixx Iyy Izz] -->
         <inertial pos="0.0552763 -0.0165544 -0.00927161"
                   quat="-0.005176 0.693173 0.0544357 0.718694"
                   mass="1.1132"
                   diaginertia="0.00641833 0.00468513 0.00204569"/>
+        <!-- [joint] 右前下摆臂旋转关节, name=rf0_Joint, axis=绕Z轴旋转, range=±100rad(无限制), actuatorfrcrange=±30Nm -->
         <joint name="rf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
+        <!-- [geom] 右前下摆臂碰撞/显示体, type=mesh网格, mesh=使用rf0_Link.STL -->
         <geom type="mesh" rgba="1 1 1 1" mesh="rf0_Link"/>
+        <!-- [site] 右前上连接点(equality约束用), name=Right_front_site1, pos=连接点坐标, 红色 -->
         <site name="Right_front_site1" pos="0.09435 0 0" size="0.005" rgba="1 0 0 1"/>
+        <!-- [site] 右前减震器下挂载点(tendon弹簧用), name=right_lf0_qitanhuang, 红色 -->
         <site name="right_lf0_qitanhuang" pos="0.0155 -0.0445 -0.008" size="0.005" rgba="1 0 0 1"/>
+        <!-- [body] 右前悬挂上摆臂, name=rf1_Link, pos=下摆臂末端向前0.175m -->
         <body name="rf1_Link" pos="0.17472 0 0">
+          <!-- [inertial] 右前上摆臂惯性, mass=0.307kg -->
           <inertial pos="-0.00283459 -0.0710676 0.0068255"
                     quat="0.483182 0.50274 -0.490133 0.523027"
                     mass="0.306873"
                     diaginertia="0.0025405 0.00248016 8.5602e-05"/>
+          <!-- [joint] 右前上摆臂关节, name=rf1_Joint, range=-1.1~+0.63rad(约-63°~+36°), actuatorfrcrange=±30Nm -->
           <joint name="rf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-1.1 0.63" actuatorfrcrange="-30 30"/>
+          <!-- [geom] 右前上摆臂碰撞/显示体, mesh=rf1_Link.STL -->
           <geom type="mesh" rgba="1 1 1 1" mesh="rf1_Link"/>
+          <!-- [site] 右前下连接点(equality约束用), name=Right_front_site2, 红色 -->
           <site name="Right_front_site2" pos="-0.0160931 0.0609099 0" size="0.005" rgba="1 0 0 1"/>
+          <!-- [site] 右前减震器上挂载点(tendon弹簧用), name=right_lf1_qitanhuang, 红色 -->
           <site name="right_lf1_qitanhuang" pos="0.005 -0.046 -0.005" size="0.01" rgba="1 0 0 1"/>
+          <!-- [body] 右轮, name=r_wheel_Link, pos=上摆臂右侧0.208m -->
           <body name="r_wheel_Link" pos="0 -0.208 0.016">
+            <!-- [inertial] 右轮惯性, mass=0.4904kg, fullinertia=完整惯量张量 -->
             <inertial pos="4.1184e-06 -0.00019289 0.019562"
                       mass="0.4904"
                       fullinertia="0.00033958 0.00034133 0.0005817 0 0 0"/>
+            <!-- [joint] 右轮旋转关节, name=r_wheel_Joint, axis=Z轴旋转, 驱动轮(actuator ctrlrange=±500实际决定力矩) -->
             <joint name="r_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+            <!-- [geom] 右轮碰撞/显示体, mesh=r_wheel_Link.STL -->
             <geom type="mesh" rgba="1 1 1 1" mesh="r_wheel_Link"/>
           </body>
         </body>
       </body>
 
       <!-- ================== 左前悬挂 ================== -->
+      <!-- [body] 左前悬挂下摆臂, name=lf0_Link, pos=底盘左偏0.188m+上移0.087m -->
       <body name="lf0_Link" pos="0 0.1877 0.08725" quat="0.707105 -0.707108 0 0">
+        <!-- [inertial] 左前下摆臂惯性, mass=1.1128kg -->
         <inertial pos="0.055403 0.016584 -0.0092702"
                   quat="0.00463484 0.693099 -0.0538381 0.718814"
                   mass="1.1128"
                   diaginertia="0.00641157 0.0046755 0.00204815"/>
+        <!-- [joint] 左前下摆臂关节, name=lf0_Joint, axis=Z轴旋转, actuatorfrcrange=±30Nm -->
         <joint name="lf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
+        <!-- [geom] 左前下摆臂碰撞/显示体, mesh=lf0_Link.STL -->
         <geom type="mesh" rgba="1 1 1 1" mesh="lf0_Link"/>
+        <!-- [site] 左前上连接点(equality约束用), name=Left_front_site1, 红色 -->
         <site name="Left_front_site1" pos="0.09435 0 0" size="0.005" rgba="1 0 0 1"/>
+        <!-- [site] 左前减震器下挂载点(tendon弹簧用), name=left_lf0_qitanhuang, 红色 -->
         <site name="left_lf0_qitanhuang" pos="0.0155 0.0445 -0.008" size="0.005" rgba="1 0 0 1"/>
+        <!-- [body] 左前悬挂上摆臂, name=lf1_Link, pos=下摆臂末端向前0.175m -->
         <body name="lf1_Link" pos="0.17472 0 0">
+          <!-- [inertial] 左前上摆臂惯性, mass=0.307kg -->
           <inertial pos="-0.0028358 0.071068 0.0068255"
                     quat="0.50274 0.483182 -0.523027 0.490133"
                     mass="0.30687"
                     diaginertia="0.0025405 0.00248016 8.5602e-05"/>
+          <!-- [joint] 左前上摆臂关节, name=lf1_Joint, range=-0.63~+1.1rad(约-36°~+63°), actuatorfrcrange=±30Nm -->
           <joint name="lf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-0.63 1.1" actuatorfrcrange="-30 30"/>
+          <!-- [geom] 左前上摆臂碰撞/显示体, mesh=lf1_Link.STL -->
           <geom type="mesh" rgba="1 1 1 1" mesh="lf1_Link"/>
+          <!-- [site] 左前下连接点(equality约束用), name=Left_front_site2, 红色 -->
           <site name="Left_front_site2" pos="-0.0160931 -0.0609099 0" size="0.01" rgba="1 0 0 1"/>
+          <!-- [site] 左前减震器上挂载点(tendon弹簧用), name=left_lf1_qitanhuang, 红色 -->
           <site name="left_lf1_qitanhuang" pos="0.005 0.046 -0.005" size="0.01" rgba="1 0 0 1"/>
+          <!-- [body] 左轮, name=l_wheel_Link, pos=上摆臂左侧0.208m -->
           <body name="l_wheel_Link" pos="0 0.208 0.016">
+            <!-- [inertial] 左轮惯性, mass=0.4904kg -->
             <inertial pos="-4.1184e-06 0.00019289 0.019562"
                       mass="0.4904"
                       fullinertia="0.00033958 0.00034133 0.0005817 0 0 0"/>
+            <!-- [joint] 左轮旋转关节, name=l_wheel_Joint, axis=Z轴, 驱动轮 -->
             <joint name="l_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+            <!-- [geom] 左轮碰撞/显示体, mesh=l_wheel_Link.STL -->
             <geom type="mesh" rgba="1 1 1 1" mesh="l_wheel_Link"/>
           </body>
         </body>
       </body>
 
       <!-- ================== 右后四连杆 ================== -->
+      <!-- [body] 右后四连杆第1杆(固定座), name=r20_Link, pos=底盘右偏0.188m+上移0.087m -->
       <body name="r20_Link" pos="0 -0.1877 0.08725" quat="0.707105 0.707108 0 0">
+        <!-- [inertial] 右后第1杆惯性, mass=0.058kg -->
         <inertial pos="-0.0077129 -0.044014 0.0053168"
                   quat="0.54287 0.453598 -0.539995 0.456012"
                   mass="0.058433"
                   diaginertia="0.000101653 9.09634e-05 1.15321e-05"/>
+        <!-- [joint] 右后第1杆关节, name=r20_Joint, axis=Z轴旋转(无range=自由旋转) -->
         <joint name="r20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
+        <!-- [geom] 右后第1杆碰撞/显示体, mesh=r20_Link.STL -->
         <geom type="mesh" rgba="1 1 1 1" mesh="r20_Link"/>
+        <!-- [body] 右后四连杆第2杆, name=r21_Link, pos=第1杆向后0.093m+上移0.01m -->
         <body name="r21_Link" pos="-0.016285 -0.092933 0.01">
+          <!-- [inertial] 右后第2杆惯性, mass=0.043kg -->
           <inertial pos="0.05374 -0.013258 -0.01451"
                     quat="0.0690441 0.704772 -0.0560118 0.70384"
                     mass="0.042999"
                     diaginertia="7.83158e-05 7.61359e-05 2.77956e-06"/>
+          <!-- [joint] 右后第2杆关节, name=r21_Link(注意: 命名未用_Joint后缀, 保留原始数据) -->
           <joint name="r21_Link" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+          <!-- [geom] 右后第2杆碰撞/显示体, mesh=r21_Link.STL -->
           <geom type="mesh" rgba="1 1 1 1" mesh="r21_Link"/>
+          <!-- [body] 右后四连杆第3杆, name=r22_Link, pos=第2杆向前0.111m -->
           <body name="r22_Link" pos="0.11063 -0.019387 0">
+            <!-- [inertial] 右后第3杆惯性, mass=0.066kg -->
             <inertial pos="-0.006381 0.08888 -0.0045"
                       quat="0.475753 0.523125 -0.475753 0.523125"
                       mass="0.065877"
                       diaginertia="0.00021104 0.000205523 6.41108e-06"/>
+            <!-- [joint] 右后第3杆关节, name=r22_Joint -->
             <joint name="r22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+            <!-- [geom] 右后第3杆碰撞/显示体, mesh=r22_Link.STL -->
             <geom type="mesh" rgba="1 1 1 1" mesh="r22_Link"/>
+            <!-- [site] 右后上连接点(equality约束用), name=Right_rear_site1, 黄色 -->
             <site name="Right_rear_site1" pos="0 0.11232 0" size="0.005" rgba="1 1 0 1"/>
+            <!-- [body] 右后四连杆第4杆(支撑臂), name=r23_Link, pos=第3杆向后0.018m+右移0.173m -->
             <body name="r23_Link" pos="-0.018032 0.17268 0">
+              <!-- [inertial] 右后第4杆惯性, mass=0.011kg -->
               <inertial pos="0.040186 0 -0.014509"
                         quat="0 0.707107 0 0.707107"
                         mass="0.010945"
                         diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
+              <!-- [joint] 右后第4杆关节, name=r23_Joint -->
               <joint name="r23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+              <!-- [geom] 右后第4杆碰撞/显示体, mesh=r23_Link.STL -->
               <geom type="mesh" rgba="1 1 1 1" mesh="r23_Link"/>
+              <!-- [site] 右后下连接点(equality约束用), name=Right_rear_site2, 黄色 -->
               <site name="Right_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
             </body>
           </body>
@@ -236,36 +391,54 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
       </body>
 
       <!-- ================== 左后四连杆 ================== -->
+      <!-- [body] 左后四连杆第1杆(固定座), name=l20_Link, pos=底盘左偏0.188m+上移0.087m -->
       <body name="l20_Link" pos="0 0.1877 0.08725" quat="0.707105 -0.707108 0 0">
+        <!-- [inertial] 左后第1杆惯性, mass=0.058kg -->
         <inertial pos="-0.0077129 -0.044014 0.0053168"
                   quat="-0.066476 0.705194 0.0534809 0.703863"
                   mass="0.058433"
                   diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
+        <!-- [joint] 左后第1杆关节, name=l20_Joint, axis=Z轴旋转 -->
         <joint name="l20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
+        <!-- [geom] 左后第1杆碰撞/显示体, mesh=l20_Link.STL -->
         <geom type="mesh" rgba="1 1 1 1" mesh="l20_Link"/>
+        <!-- [body] 左后四连杆第2杆, name=l21_Link, pos=第1杆向后0.093m+上移0.01m -->
         <body name="l21_Link" pos="-0.016285 0.092933 0.01">
+          <!-- [inertial] 左后第2杆惯性, mass=0.043kg -->
           <inertial pos="0.055588 0.013582 -0.01451"
                     quat="-0.066476 0.705194 0.0534809 0.703863"
                     mass="0.042999"
                     diaginertia="7.83158e-05 7.61355e-05 2.77958e-06"/>
+          <!-- [joint] 左后第2杆关节, name=l21_Joint -->
           <joint name="l21_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+          <!-- [geom] 左后第2杆碰撞/显示体, mesh=l21_Link.STL -->
           <geom type="mesh" rgba="1 1 1 1" mesh="l21_Link"/>
+          <!-- [body] 左后四连杆第3杆, name=l22_Link, pos=第2杆向前0.111m -->
           <body name="l22_Link" pos="0.11063 0.019387 0">
+            <!-- [inertial] 左后第3杆惯性, mass=0.066kg -->
             <inertial pos="-0.006381 -0.08888 -0.0045"
                       quat="0.523125 0.475753 -0.523125 0.475753"
                       mass="0.065877"
                       diaginertia="0.00021104 0.000205523 6.41108e-06"/>
+            <!-- [joint] 左后第3杆关节, name=l22_Joint -->
             <joint name="l22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+            <!-- [geom] 左后第3杆碰撞/显示体, mesh=l22_Link.STL -->
             <geom type="mesh" rgba="1 1 1 1" mesh="l22_Link"/>
+            <!-- [site] 左后上连接点(equality约束用), name=Left_rear_site1, 黄色 -->
             <site name="Left_rear_site1" pos="0 -0.11232 0" size="0.005" rgba="1 1 0 1"/>
+            <!-- [body] 左后四连杆第4杆(支撑臂), name=l23_Link, pos=第3杆向后0.018m+左移0.173m -->
             <body name="l23_Link" pos="-0.018032 -0.17268 0">
+              <!-- [inertial] 左后第4杆惯性, mass=0.011kg -->
               <inertial pos="0.040186 0 -0.014509"
                         quat="0 0.707107 0 0.707107"
                         mass="0.010945"
                         diaginertia="1.0337e-05 9.8695e-06 6.2034e-07"/>
+              <!-- [joint] 左后第4杆关节, name=l23_Joint -->
               <joint name="l23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
+              <!-- [geom] 左后第4杆碰撞/显示体, mesh=l23_Link.STL -->
               <geom type="mesh" rgba="1 1 1 1" mesh="l23_Link"/>
+              <!-- [site] 左后下连接点(equality约束用), name=Left_rear_site2, 黄色 -->
               <site name="Left_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
             </body>
           </body>
