@@ -4,7 +4,7 @@
  *
  * 编译命令（在 mujoco_env 环境中执行）：
  *
- *   x86_64-w64-mingw32-g++ -shared -o infantry_controller.dll infantry_controller.cpp -O2
+ *   C:\Users\"CHIPS KILLER"\Desktop\EETools\repository\mingw64\bin\g++.exe -shared -o infantry_controller.dll infantry_controller.cpp -O2
  *
  * 参数说明：
  *   -shared         生成动态链接库 (.dll) 而非可执行文件 (.exe)
@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include "C:\Conda\mujoco_wl\librm\src\librm.hpp"  // 机器人控制器接口头文件
 
 // ================================================================
 //  传感器数据布局（与 mjmodel_lqr.xml 中 <sensor> 定义顺序一致）
@@ -70,8 +71,8 @@ static const double SUSPENSION_REF_RF0 = 0.0;   // 右前悬挂上参考角度
 static const double SUSPENSION_REF_RF1 = 0.0;   // 右前悬挂下参考角度
 
 // PD 控制增益
-static const double KP_SUSPENSION = 30.0;       // 悬挂位置环比例增益
-static const double KD_SUSPENSION = 5.0;        // 悬挂位置环微分增益
+static const double KP_SUSPENSION = 0.1;       // 悬挂位置环比例增益
+static const double KD_SUSPENSION = 0.1;        // 悬挂位置环微分增益
 
 // ================================================================
 //  clamp: 将值限制在 [lo, hi] 范围内
