@@ -40,6 +40,8 @@ class LegWheelRobot:
         self.wheel_torque = [0,0]#顺序：右、左
         self.joint_torque = [0,0,0,0]#顺序：右前、右后、左前、左后
 
+        self._render_skip = 0   # 渲染降频计数器: 每 5 次 step 渲染 1 次
+
 
 
         # 启动可视化界面
@@ -111,12 +113,13 @@ class LegWheelRobot:
         mujoco.mj_forward(self.model, self.data)
 
     def step(self):
-        """执行一步仿真"""
+        """执行一步仿真, 每 5 次 mj_step 才 sync 一次画面"""
         mujoco.mj_step(self.model, self.data)
-        self.viewer.sync()
+        self._render_skip += 1
+        if self._render_skip % 5 == 0:      # 渲染频率降为物理频率的 1/5
+            self.viewer.sync()
     
     def reset(self):
         """重置机器人状态"""
         mujoco.mj_resetData(self.model, self.data)
         # self.motor_set_torque(0.0, 0.0)
-

@@ -10,7 +10,9 @@ from Controller import *
 def main():
     
     TORQUE = 1  #为1时给力矩，为0是无力矩
+    SYNC_TIME = False # True=对齐真实世界时间, False=能跑多快跑多快
     GBC486 = LegWheelRobot('MJCF/env.xml')
+    dt = GBC486.model.opt.timestep      # 从模型读取真实步长 (0.001s)
     i = 0
     t1 = 1
     t2 = 4
@@ -19,6 +21,10 @@ def main():
     vmc_l = leg_VMC()
     keyboard = KeyboardController()
 
+    # 累计时间对齐: 跟踪总仿真时间 vs 总真实时间
+    # 每步累加 dt (仿真时间), 忙等待让真实时间追上仿真时间
+    sim_time = 0.0                        # 仿真世界已过的总时间 (s)
+    real_start = time.perf_counter()       # 程序启动的真实时间戳
 
     while True:
         i = i + 1
@@ -51,6 +57,15 @@ def main():
         if i % t3 == 0:
             cmd = keyboard.get_command()
             # print(vmc_r.L0,vmc_l.L0)
+
+        # 时间同步（可开关）—— 累计对齐模式
+        #   每步 sim_time 累加 dt, 然后用忙等待让真实时间追上来
+        #   好处: 某步慢（如 viewer.sync 多花了 3ms）不影响整体,
+        #         后续步自动多等一点补回来, 长期平均 = 1.0x 实时
+        sim_time += dt
+        if SYNC_TIME:
+            while time.perf_counter() - real_start < sim_time:
+                pass
 
 
 
