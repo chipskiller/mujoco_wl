@@ -203,6 +203,10 @@ def main():
     # ============================================================
     print("\n[启动] MuJoCo Viewer...")
     with mujoco.viewer.launch_passive(model, data) as viewer:
+        # 默认开启执行器力箭头可视化
+        #   mjtVisFlag.mjVIS_ACTUATOR: 在每个执行器关节处显示彩色箭头,
+        #   箭头大小和颜色表示力矩方向和大小, 红色=推力, 蓝色=拉力
+        viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_ACTUATOR] = 1
         step_count = 0
         # 每 200 帧 (≈ 1 秒, dt=0.001, N_SUBSTEPS=5) 打印一次传感器数据
         print_interval = 200

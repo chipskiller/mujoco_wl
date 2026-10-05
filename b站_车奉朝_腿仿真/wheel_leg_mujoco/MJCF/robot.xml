@@ -1,4 +1,58 @@
+<!--
+  ╔══════════════════════════════════════════════════════════════╗
+  ║  轮腿机器人模型 — 五连杆并联腿机构                             ║
+  ║=============================================================║
+  ║                                                             ║
+  ║  构型: 每个腿由两根摇臂(前AB/后AG)通过连架杆形成             ║
+  ║        五连杆闭链, 末端安装驱动轮。                           ║
+  ║                                                             ║
+  ║  右腿运动链 (蓝色, 车身右侧 -Y):                              ║
+  ║    base ─┬─ AB ── BE ── EC ── CF    (前连杆链, 主动)        ║
+  ║          └─ AG ── GH ── wheel_right  (后腿臂链, 主动)        ║
+  ║    EC-D ═ AG-D (闭链约束 D 点)                               ║
+  ║    CF-F ═ GH-F (闭链约束 F 点)                               ║
+  ║                                                             ║
+  ║  左腿运动链 (红色, 车身左侧 +Y):                              ║
+  ║    base ─┬─ IJ ── JM ── MK ── KN    (前连杆链, 主动)        ║
+  ║          └─ IO ── OP ── wheel_left   (后腿臂链, 主动)        ║
+  ║    IO-L ═ MK-L (闭链约束 L 点)                               ║
+  ║    OP-N ═ KN-N (闭链约束 N 点)                               ║
+  ║                                                             ║
+  ║  执行器 (6 个 motor, ctrl[0..5]):                             ║
+  ║    ctrl[0] → jAB   (右前摇臂)    ±20 Nm                      ║
+  ║    ctrl[1] → jAG   (右后腿臂)    ±20 Nm                      ║
+  ║    ctrl[2] → jIJ   (左前摇臂)    ±20 Nm                      ║
+  ║    ctrl[3] → jIO   (左后腿臂)    ±20 Nm                      ║
+  ║    ctrl[4] → jwheel_right (右轮) ±4 Nm                       ║
+  ║    ctrl[5] → jwheel_left  (左轮) ±4 Nm                       ║
+  ║                                                             ║
+  ║  传感器 (13 个 double, sensor[0..12]):                        ║
+  ║    [0..3] orientation   IMU姿态四元数 (w x y z)              ║
+  ║    [4..6] gyro          IMU角速度   (gx gy gz) rad/s         ║
+  ║    [7]    Right_Wheel_pos  右轮位置 rad                      ║
+  ║    [8]    Left_Wheel_pos   左轮位置 rad                      ║
+  ║    [9]    Right_front_joint_pos  右前摇臂角度 rad             ║
+  ║    [10]   Right_rear_joint_pos   右后腿臂角度 rad             ║
+  ║    [11]   Left_front_joint_pos   左前摇臂角度 rad             ║
+  ║    [12]   Left_rear_joint_pos    左后腿臂角度 rad             ║
+  ║                                                             ║
+  ║  控制逻辑 (VMC 虚拟模型控制, 见 VMC.py):                       ║
+  ║    注意: 物理上腿是四杆串联链(AB/BE/EC/CF),                  ║
+  ║    但 VMC 把它抽象为等价五杆机构来解算:                       ║
+  ║      5杆 = 底盘 + AB + AG + 等价BC + 等价DC                  ║
+  ║    其中"等价BC"和"等价DC"是中间连杆的几何等效,                ║
+  ║    不是物理上存在的一根杆。详见 VMC.py 注释。                  ║
+  ╚══════════════════════════════════════════════════════════════╝
+-->
 <mujoco model="GBC486.SLDASM">
+
+  <!-- ==========================================================
+       default: 碰撞属性分类
+         class="touch"   → 参与碰撞检测 (地面、轮子、触地杆件)
+         class="untouch" → 不参与碰撞 (悬空连杆, 减少计算量)
+       contype/conaffinity 都是位掩码, 只有相同位的两个 geom
+       才会互相检测碰撞。
+       ========================================================== -->
   <default>
     <default class="touch">
         <geom contype="1" conaffinity="1" />
@@ -7,59 +61,135 @@
         <geom contype="0" conaffinity="0" />
     </default>
   </default>
+
   <compiler angle="radian"/>
-  
+
+  <!-- ==========================================================
+       asset: 所有网格(.STL)和材质(.material)定义
+       ========================================================== -->
   <asset>
+    <!-- ── 网格: STL 文件, 每个对应一个刚体部件 ────────────── -->
+
+    <!-- 车身底盘 -->
     <mesh name="base_link" file="base_link.STL"/>
+
+    <!-- 右腿 (蓝色系, 车身右侧 -Y 方向) -->
+    <!-- AG: 右后腿臂(大腿), 主动驱动 -->
     <mesh name="AG" file="AG.STL"/>
+    <!-- GH: 右小腿/末端, 连接轮子 -->
     <mesh name="GH" file="GH.STL"/>
+    <!-- wheel_right: 右轮 -->
     <mesh name="wheel_right" file="wheel_right.STL"/>
+    <!-- AB: 右前摇臂(上连杆), 主动驱动 -->
     <mesh name="AB" file="AB.STL"/>
+    <!-- BE: 右前中连杆 -->
     <mesh name="BE" file="BE.STL"/>
+    <!-- EC: 右前下连杆 -->
     <mesh name="EC" file="EC.STL"/>
+    <!-- CF: 右前末端连杆 -->
     <mesh name="CF" file="CF.STL"/>
+
+    <!-- 左腿 (红色系, 车身左侧 +Y 方向) -->
+    <!-- IJ: 左前摇臂(上连杆), 主动驱动 -->
     <mesh name="IJ" file="IJ.STL"/>
+    <!-- JM: 左前中连杆 -->
     <mesh name="JM" file="JM.STL"/>
+    <!-- MK: 左前下连杆 -->
     <mesh name="MK" file="MK.STL"/>
+    <!-- KN: 左前末端连杆 -->
     <mesh name="KN" file="KN.STL"/>
+    <!-- IO: 左后腿臂(大腿), 主动驱动 -->
     <mesh name="IO" file="IO.STL"/>
-    <mesh name="OP" file="OP.STL"/>   
+    <!-- OP: 左小腿/末端, 连接轮子 -->
+    <mesh name="OP" file="OP.STL"/>
+    <!-- wheel_left: 左轮 -->
     <mesh name="wheel_left" file="wheel_left.STL"/>
-    
-    <!-- 添加材质 -->
+
+    <!-- ── 材质: 决定部件外观颜色和反光 ──────────────────── -->
+    <!-- rgba = (R, G, B, 透明度), specular=高光, shininess=光泽度 -->
+
+    <!-- 底盘: 深蓝灰色 -->
     <material name="base_mat" rgba="0.2 0.2 0.25 1" specular="0.5" shininess="0.5"/>
+    <!-- 右腿臂: 蓝色 -->
     <material name="arm_blue" rgba="0.3 0.5 0.8 1" specular="0.8" shininess="0.8"/>
+    <!-- 左腿臂: 红色 -->
     <material name="arm_red" rgba="0.8 0.3 0.3 1" specular="0.8" shininess="0.8"/>
+    <!-- 连杆关节: 绿色 (中间连杆) -->
     <material name="arm_green" rgba="0.3 0.8 0.4 1" specular="0.8" shininess="0.8"/>
+    <!-- 关节连接件: 浅银灰色 -->
     <material name="joint_mat" rgba="0.7 0.7 0.75 1" specular="1.0" shininess="1.0"/>
+    <!-- 轮子: 深灰色 -->
     <material name="wheel_mat" rgba="0.15 0.15 0.2 1" specular="0.3" shininess="0.2"/>
+    <!-- 白色 (备用) -->
     <material name="white_mat" rgba="0.95 0.95 0.97 1" specular="0.9" shininess="0.7"/>
   </asset>
 
+  <!-- ==========================================================
+       worldbody: 所有刚体和关节, 从根节点 base 开始
+       ========================================================== -->
   <worldbody>
-    <!-- <body name="base" pos="0 0 0.5" quat="0.9659258262890683 0 0.25881904510252076 0"> -->
-    <body name="base" pos="0 0 0.2" >
-    <!-- "扣雷挖及悠打"，注释下面这行代码可以让车身悬浮在空中 -->
-      <joint name="base_free" type="free"/>
-      <site name="imu" type="box" size="0.002 0.002 0.002"  rgba="1 1 0 1"/>
-      <geom type="mesh" material="base_mat" mesh="base_link" 
-        class="touch" mass="8.4"/>
-      
 
-      <!-- 右腿臂（蓝色系） -->
+    <!--
+      base: 机器人根刚体
+        pos="0 0 0.2"  → 初始位置离地 20cm
+        free joint    → 6自由度自由运动(不锁定)
+        IMU site      → 传感器安装位(位于 base 本地原点)
+    -->
+    <body name="base" pos="0 0 0.2" >
+      <!-- free joint = 自由关节: 允许 base 在空间中任意平动和转动 -->
+      <joint name="base_free" type="free"/>
+
+      <!-- site: IMU 传感器安装位置 (box=长方体标记, 黄色) -->
+      <site name="imu" type="box" size="0.002 0.002 0.002"  rgba="1 1 0 1"/>
+
+      <!-- geom: 底盘碰撞/显示体, mass=8.4kg, 参与碰撞 -->
+      <geom type="mesh" material="base_mat" mesh="base_link"
+        class="touch" mass="8.4"/>
+
+
+      <!-- ========================================================
+           右腿 (蓝色, 车身 -Y 侧)
+           ======================================================== -->
+
+      <!--
+        AG: 右后腿臂 (大腿, 主动驱动)
+          pos:   相对 base 向后(-X)0.014m, 向右(-Y)0.2m, 向上(+Z)0.134m
+          quat:  绕X轴旋转90°(707,707,0,0)把装配方向转正
+          jAG:   旋转关节, 绕Z轴, range=-1.57~0.3 rad (约-90°~17°)
+          site AG-D: 闭链约束点D, 绿色标记
+
+          ctrl[1] → jAG ← 后腿主动力矩输入
+          sensor[10] → jAG 当前角度
+      -->
       <body name="AG" pos="-0.01375 -0.1995 0.134" quat="0.707105 0.707108 0 0">
         <joint name="jAG" pos="0 0 0" axis="0 0 1" range="-1.57 0.3"/>
-        <site name="AG-D" pos="-0.027 -0.094 0" size="0.002" rgba="0 1 0 1"/> 
+        <!-- 闭链约束连接点: AG-D 与 EC-D 通过 equality/connect 绑定 -->
+        <site name="AG-D" pos="-0.027 -0.094 0" size="0.002" rgba="0 1 0 1"/>
         <geom type="mesh" material="arm_blue" mesh="AG"
           class="untouch" mass="0.667"/>
 
+        <!--
+          GH: 右小腿/末端杆
+            pos: 相对AG向后下方向延伸
+            jGH: 旋转关节, range=-0.85~1 rad
+            site GH-F: 闭链约束点F, 绿色标记
+            site GH-little_wheel: 辅助小轮标记点
+
+            注意: jGH 没有执行器! 它随五连杆闭链被动运动
+        -->
         <body name="GH" pos="-0.060152 -0.20641 0.0345">
           <joint name="jGH" pos="0 0 0" axis="0 0 1" range="-0.85 1"/>
-          <site name="GH-F" pos="-0.0604 0.0259 -0.03" size="0.01" rgba="0 1 0 1"/> 
-          <site name="GH-little_wheel" pos="-0.033 -0.062 -0.01" size="0.01" rgba="0 1 0 1"/> 
+          <site name="GH-F" pos="-0.0604 0.0259 -0.03" size="0.01" rgba="0 1 0 1"/>
+          <site name="GH-little_wheel" pos="-0.033 -0.062 -0.01" size="0.01" rgba="0 1 0 1"/>
           <geom type="mesh" material="joint_mat" mesh="GH"
             class="touch" mass="1.64"/>
 
+          <!--
+            wheel_right: 右驱动轮
+              jwheel_right: 旋转关节, 绕-Z轴(反转)
+              ctrl[4] → jwheel_right ← 轮子驱动力矩
+              sensor[7] → jwheel_right 当前角度
+          -->
           <body name="wheel_right" pos="0.25495 -0.039583 0.0155">
             <joint name="jwheel_right" pos="0 0 0" axis="0 0 -1"/>
             <geom type="mesh" material="arm_blue" mesh="wheel_right"
@@ -68,52 +198,93 @@
         </body>
       </body>
 
+      <!--
+        AB: 右前摇臂(上连杆, 主动驱动)
+          jAB: 旋转关节, range=-1.57~0.5 rad
+          ctrl[0] → jAB ← 前连杆主动力矩输入
+          sensor[9] → jAB 当前角度
+      -->
       <body name="AB" pos="-0.01375 -0.2155 0.134" quat="0.707105 0.707108 0 0">
         <joint name="jAB" pos="0 0 0" axis="0 0 1" range="-1.57 0.5"/>
         <geom type="mesh" material="joint_mat" mesh="AB"
         class="untouch" mass="0.202"/>
 
+        <!--
+          BE: 右前中连杆
+            jBE: 无 range = 可自由旋转
+            被动关节, 仅传力
+        -->
         <body name="BE" pos="0.097866 0.0051238 -0.013">
           <joint name="jBE" pos="0 0 0" axis="0 0 1"/>
           <geom type="mesh" material="arm_blue" mesh="BE"
           class="touch" mass="0.057"/>
 
+          <!--
+            EC: 右前下连杆
+              jEC: 绕-Z轴
+              site EC-D: 闭链约束点D, 红色标记(与AG-D绑定)
+              被动关节
+          -->
           <body name="EC" pos="-0.0090761 -0.11725 0.0094">
             <joint name="jEC" pos="0 0 0" axis="0 0 -1"/>
-            <site name="EC-D" pos="-0.115974 0.017382 -0.01" size="0.002" rgba="1 0 0 1"/> 
+            <site name="EC-D" pos="-0.115974 0.017382 -0.01" size="0.002" rgba="1 0 0 1"/>
             <geom type="mesh" material="joint_mat" mesh="EC"
             class="touch" mass="0.128"/>
 
+            <!--
+              CF: 右前末端连杆
+                jCF: 绕-Z轴
+                site CF-F: 闭链约束点F, 红色标记(与GH-F绑定)
+                被动关节
+            -->
             <body name="CF" pos="-0.17658 0.044698 -0.0124">
               <joint name="jCF" pos="0 0 0" axis="0 0 -1"/>
-              <site name="CF-F" pos="-0.0332 -0.111 0" size="0.002" rgba="1 0 0 1"/> 
+              <site name="CF-F" pos="-0.0332 -0.111 0" size="0.002" rgba="1 0 0 1"/>
               <geom type="mesh" material="arm_blue" mesh="CF"
               class="touch" mass="0.057"/>
             </body>
           </body>
         </body>
       </body>
-      
-      <!-- 左腿（红色系） -->
+
+
+      <!-- ========================================================
+           左腿 (红色, 车身 +Y 侧)
+           注意: 左腿与右腿左右对称, Y轴方向相反, 部分关节轴镜像
+           ======================================================== -->
+
+      <!--
+        IJ: 左前摇臂(上连杆, 主动驱动)
+          pos: Y=+0.2165 (左侧), 与右腿AB对称
+          jIJ: 绕-Z轴(与右腿AB的+Z轴相反, 因为是镜像)
+          ctrl[2] → jIJ ← 前连杆主动力矩输入
+          sensor[11] → jIJ 当前角度
+      -->
       <body name="IJ" pos="-0.01375 0.2165 0.134" quat="0.707105 0.707108 0 0">
         <joint name="jIJ" pos="0 0 0" axis="0 0 -1" range="-0.5 1.57"/>
         <geom type="mesh" material="joint_mat" mesh="IJ"
         class="untouch" mass="0.202"/>
 
+        <!-- JM: 左前中连杆, 被动 -->
         <body name="JM" pos="0.097866 0.0051238 0.013">
           <joint name="jJM" pos="0 0 0" axis="0 0 -1"/>
           <geom type="mesh" material="arm_red" mesh="JM"
           class="touch" mass="0.057"/>
 
+          <!--
+            MK: 左前下连杆
+              site MK-L: 闭链约束点L, 红色标记(与IO-L绑定)
+          -->
           <body name="MK" pos="-0.0090761 -0.11725 -0.0094">
             <joint name="jMK" pos="0 0 0" axis="0 0 -1"/>
-            <site name="MK-L" pos="-0.115974 0.017382 0.01" size="0.01" rgba="1 0 0 1"/> 
+            <site name="MK-L" pos="-0.115974 0.017382 0.01" size="0.01" rgba="1 0 0 1"/>
             <geom type="mesh" material="joint_mat" mesh="MK"
             class="touch" mass="0.128"/>
 
+            <!-- KN: 左前末端连杆, site KN-N 为闭链约束点N -->
             <body name="KN" pos="-0.17658 0.044698 0.0124">
               <joint name="jKN" pos="0 0 0" axis="0 0 1"/>
-              <site name="KN-N" pos="-0.0332 -0.111 0" size="0.01" rgba="1 0 0 1"/> 
+              <site name="KN-N" pos="-0.0332 -0.111 0" size="0.01" rgba="1 0 0 1"/>
               <geom type="mesh" material="arm_red" mesh="KN"
               class="touch" mass="0.057"/>
             </body>
@@ -121,18 +292,31 @@
         </body>
       </body>
 
+      <!--
+        IO: 左后腿臂 (大腿, 主动驱动)
+          jIO: 绕-Z轴, range=-0.3~1.57 rad
+          ctrl[3] → jIO ← 后腿主动力矩输入
+          sensor[12] → jIO 当前角度
+      -->
       <body name="IO" pos="-0.01375 0.2005 0.134" quat="0.707105 0.707108 0 0">
         <joint name="jIO" pos="0 0 0" axis="0 0 -1" range="-0.3 1.57"/>
-        <site name="IO-L" pos="-0.027 -0.094 0" size="0.01" rgba="0 1 0 1"/> 
+        <site name="IO-L" pos="-0.027 -0.094 0" size="0.01" rgba="0 1 0 1"/>
         <geom type="mesh" material="arm_red" mesh="IO"
         class="untouch" mass="0.667"/>
 
+        <!-- OP: 左小腿/末端杆, jOP 被动 -->
         <body name="OP" pos="-0.060152 -0.20641 -0.0345">
           <joint name="jOP" pos="0 0 0" axis="0 0 -1" range="-1 0.85"/>
-          <site name="OP-N" pos="-0.0604 0.0259 0.03" size="0.01" rgba="0 1 0 1"/> 
+          <site name="OP-N" pos="-0.0604 0.0259 0.03" size="0.01" rgba="0 1 0 1"/>
           <geom type="mesh" material="joint_mat" mesh="OP"
           class="touch" mass="1.64"/>
 
+          <!--
+            wheel_left: 左驱动轮
+              jwheel_left: 绕+Z轴
+              ctrl[5] → jwheel_left ← 轮子驱动力矩
+              sensor[8] → jwheel_left 当前角度
+          -->
           <body name="wheel_left" pos="0.25495 -0.039576 -0.0155">
             <joint name="jwheel_left" pos="0 0 0" axis="0 0 1"/>
             <geom type="mesh" material="arm_red" mesh="wheel_left"
@@ -143,41 +327,91 @@
     </body>
   </worldbody>
 
+  <!-- ==========================================================
+       equality: 约束/连接
+         connect: 把两个 site 点绑定在一起, 形成闭链约束
+         相当于在 D/F/L/N 四个点把前后连杆"钉"在一起
+
+         solref:  约束刚度/阻尼 (timeconst=0.001, dampratio=1)
+         solimp:  约束求解器阻抗参数 (dmin,dmax,width,mid,power)
+         ========================================================== -->
   <equality>
+    <!-- 右腿 D 点: EC杆末端的EC-D 与 后腿臂的AG-D 绑定 -->
     <connect name="right_D" site1="EC-D" site2="AG-D" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <!-- 右腿 F 点: CF杆末端的CF-F 与 小腿杆的GH-F 绑定 -->
     <connect name="right_F" site1="CF-F" site2="GH-F" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <connect name="left_L" site1="IO-L" site2="MK-L" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <connect name="left_F" site1="OP-N" site2="KN-N" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <!-- 左腿 L 点: IO杆的IO-L 与 MK杆的MK-L 绑定 -->
+    <connect name="left_L"  site1="IO-L" site2="MK-L" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <!-- 左腿 N 点: OP杆的OP-N 与 KN杆的KN-N 绑定 -->
+    <connect name="left_N"  site1="OP-N" site2="KN-N" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
   </equality>
 
-  <actuator>
-    <general name="Right_front_joint_act" joint="jAB" gainprm="1" ctrlrange="-20 +20" />
-    <general name="Right_rear_joint_act"  joint="jAG"  gainprm="1" ctrlrange="-20 +20" />
-    <general name="Left_front_joint_act"  joint="jIJ"  gainprm="1" ctrlrange="-20 20"  />
-    <general name="Left_rear_joint_act"   joint="jIO"   gainprm="1" ctrlrange="-20 +20" />
+  <!-- ==========================================================
+       actuator: 执行器/电机 (6个)
+         类型均为 general (广义力执行器, 直接施加力矩)
+         gainprm="1" = 力矩增益=1 (ctrl值直接等于Nm)
+         ctrlrange   = 力矩限幅 (±Nm)
 
-    <general name="Right_Wheel_act"       joint="jwheel_right" gainprm="1" ctrlrange="-4 +4"   />
+         快速对照:
+           ctrl[0]  Right_front_joint_act  →  jAB  右前摇臂  ±20 Nm
+           ctrl[1]  Right_rear_joint_act   →  jAG  右后腿臂  ±20 Nm
+           ctrl[2]  Left_front_joint_act   →  jIJ  左前摇臂  ±20 Nm
+           ctrl[3]  Left_rear_joint_act    →  jIO  左后腿臂  ±20 Nm
+           ctrl[4]  Right_Wheel_act        →  jwheel_right 右轮 ±4 Nm
+           ctrl[5]  Left_Wheel_act         →  jwheel_left  左轮 ±4 Nm
+         ========================================================== -->
+  <actuator>
+    <!-- 右前摇臂 (蓝) -->
+    <general name="Right_front_joint_act" joint="jAB" gainprm="1" ctrlrange="-20 +20" />
+    <!-- 右后腿臂 (蓝) -->
+    <general name="Right_rear_joint_act"  joint="jAG" gainprm="1" ctrlrange="-20 +20" />
+    <!-- 左前摇臂 (红) -->
+    <general name="Left_front_joint_act"  joint="jIJ" gainprm="1" ctrlrange="-20 20"   />
+    <!-- 左后腿臂 (红) -->
+    <general name="Left_rear_joint_act"   joint="jIO" gainprm="1" ctrlrange="-20 +20" />
+
+    <!-- 右轮: gainprm=+1, 正向力矩→轮子正转 -->
+    <general name="Right_Wheel_act"       joint="jwheel_right" gainprm="1"  ctrlrange="-4 +4"   />
+    <!-- 左轮: gainprm=-1, 因为左轮轴方向与右轮相反(镜像), -1保证正向力矩→轮子正转 -->
     <general name="Left_Wheel_act"        joint="jwheel_left"  gainprm="-1" ctrlrange="-4 +4"   />
   </actuator>
 
-  
-    <sensor>
-      <!-- 四元数，wxyz -->
-      <framequat name='orientation' objtype='site' objname='imu' />
-      <!-- 陀螺仪，gx，gy，gz，方向以绕坐标轴右手定则为正向 -->
-      <gyro name='gyro' site='imu' />
-      <!-- 轮子的速度，单位rad/s -->
-      <jointpos joint="jwheel_right" name="Right_Wheel_pos"/>
-      <jointpos joint="jwheel_left"  name="Left_Wheel_pos" />
-      <!-- 关节的位置，单位rad -->
-      <jointpos joint="jAB" name="Right_front_joint_pos"/>
-      <jointpos joint="jAG" name="Right_rear_joint_pos"/>
-      <jointpos joint="jIJ" name="Left_front_joint_pos"/>
-      <jointpos joint="jIO" name="Left_rear_joint_pos"/>
-    </sensor>
+
+  <!-- ==========================================================
+       sensor: 传感器 (共10个传感器, 输出13个double)
+         sensor[0]  orientation_w     IMU姿态四元数 w
+         sensor[1]  orientation_x     IMU姿态四元数 x
+         sensor[2]  orientation_y     IMU姿态四元数 y
+         sensor[3]  orientation_z     IMU姿态四元数 z
+         sensor[4]  gyro_x            IMU角速度 X (roll 轴)
+         sensor[5]  gyro_y            IMU角速度 Y (pitch轴)
+         sensor[6]  gyro_z            IMU角速度 Z (yaw  轴)
+         sensor[7]  Right_Wheel_pos   右轮角度 (rad)
+         sensor[8]  Left_Wheel_pos    左轮角度 (rad)
+         sensor[9]  Right_front_joint_pos  右前摇臂角度 (rad)
+         sensor[10] Right_rear_joint_pos   右后腿臂角度 (rad)
+         sensor[11] Left_front_joint_pos   左前摇臂角度 (rad)
+         sensor[12] Left_rear_joint_pos    左后腿臂角度 (rad)
+
+         Python 读取方式:
+           data.sensordata[i] 或 data.sensor(name).data
+         ========================================================== -->
+  <sensor>
+    <!-- 四元数姿态 (w,x,y,z), 安装在 imu site 上 -->
+    <!-- framequat: 输出 site 在世界系下的姿态四元数 -->
+    <framequat name='orientation' objtype='site' objname='imu' />
+    <!-- 陀螺仪: 输出绕X/Y/Z轴的角速度 (rad/s), 右手定则正向 -->
+    <gyro name='gyro' site='imu' />
+
+    <!-- 轮子角度传感器 -->
+    <jointpos joint="jwheel_right" name="Right_Wheel_pos"/>
+    <jointpos joint="jwheel_left"  name="Left_Wheel_pos" />
+
+    <!-- 主动关节角度传感器 (对应4个执行器) -->
+    <jointpos joint="jAB" name="Right_front_joint_pos"/>
+    <jointpos joint="jAG" name="Right_rear_joint_pos"/>
+    <jointpos joint="jIJ" name="Left_front_joint_pos"/>
+    <jointpos joint="jIO" name="Left_rear_joint_pos"/>
+  </sensor>
 
 </mujoco>
-
-
-
-      

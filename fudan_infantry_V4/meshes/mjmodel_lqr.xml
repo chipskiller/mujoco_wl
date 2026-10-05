@@ -238,7 +238,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
 
       <!-- [geom] 底盘碰撞体, name=base_Link_del_geom, type=mesh网格, mesh=使用base_Link_del.STL, condim=1仅法向接触(无摩擦) -->
       <geom name="base_Link_del_geom" type="mesh"
-            rgba="1 1 1 1" mesh="base_Link_del"
+            rgba="0.35 0.38 0.42 1" mesh="base_Link_del"
             priority="2" condim="1" friction="0 0 0"/>
 
       <!-- ================== 右前悬挂 ================== -->
@@ -253,7 +253,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
         <joint name="rf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
         <!-- [geom] 右前下摆臂碰撞/显示体, type=mesh网格, mesh=使用rf0_Link.STL -->
-        <geom type="mesh" rgba="1 1 1 1" mesh="rf0_Link"/>
+        <geom type="mesh" rgba="0.90 0.45 0.20 1" mesh="rf0_Link"/>
         <!-- [site] 右前上连接点(equality约束用), name=Right_front_site1, pos=连接点坐标, 红色 -->
         <site name="Right_front_site1" pos="0.09435 0 0" size="0.005" rgba="1 0 0 1"/>
         <!-- [site] 右前减震器下挂载点(tendon弹簧用), name=right_lf0_qitanhuang, 红色 -->
@@ -269,7 +269,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
           <joint name="rf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-1.1 0.63" actuatorfrcrange="-30 30"/>
           <!-- [geom] 右前上摆臂碰撞/显示体, mesh=rf1_Link.STL -->
-          <geom type="mesh" rgba="1 1 1 1" mesh="rf1_Link"/>
+          <geom type="mesh" rgba="0.75 0.35 0.15 1" mesh="rf1_Link"/>
           <!-- [site] 右前下连接点(equality约束用), name=Right_front_site2, 红色 -->
           <site name="Right_front_site2" pos="-0.0160931 0.0609099 0" size="0.005" rgba="1 0 0 1"/>
           <!-- [site] 右前减震器上挂载点(tendon弹簧用), name=right_lf1_qitanhuang, 红色 -->
@@ -283,7 +283,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
             <!-- [joint] 右轮旋转关节, name=r_wheel_Joint, axis=Z轴旋转, 驱动轮(actuator ctrlrange=±500实际决定力矩) -->
             <joint name="r_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <!-- [geom] 右轮碰撞/显示体, mesh=r_wheel_Link.STL -->
-            <geom type="mesh" rgba="1 1 1 1" mesh="r_wheel_Link"/>
+            <geom type="mesh" rgba="0.15 0.15 0.15 1" mesh="r_wheel_Link"/>
           </body>
         </body>
       </body>
@@ -300,7 +300,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
         <joint name="lf0_Joint" pos="0 0 0" axis="0 0 1"
                armature="0" range="-100 100" actuatorfrcrange="-30 30"/>
         <!-- [geom] 左前下摆臂碰撞/显示体, mesh=lf0_Link.STL -->
-        <geom type="mesh" rgba="1 1 1 1" mesh="lf0_Link"/>
+        <geom type="mesh" rgba="0.20 0.45 0.90 1" mesh="lf0_Link"/>
         <!-- [site] 左前上连接点(equality约束用), name=Left_front_site1, 红色 -->
         <site name="Left_front_site1" pos="0.09435 0 0" size="0.005" rgba="1 0 0 1"/>
         <!-- [site] 左前减震器下挂载点(tendon弹簧用), name=left_lf0_qitanhuang, 红色 -->
@@ -316,7 +316,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
           <joint name="lf1_Joint" pos="0 0 0" axis="0 0 1"
                  armature="0.00" range="-0.63 1.1" actuatorfrcrange="-30 30"/>
           <!-- [geom] 左前上摆臂碰撞/显示体, mesh=lf1_Link.STL -->
-          <geom type="mesh" rgba="1 1 1 1" mesh="lf1_Link"/>
+          <geom type="mesh" rgba="0.15 0.35 0.70 1" mesh="lf1_Link"/>
           <!-- [site] 左前下连接点(equality约束用), name=Left_front_site2, 红色 -->
           <site name="Left_front_site2" pos="-0.0160931 -0.0609099 0" size="0.01" rgba="1 0 0 1"/>
           <!-- [site] 左前减震器上挂载点(tendon弹簧用), name=left_lf1_qitanhuang, 红色 -->
@@ -330,7 +330,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
             <!-- [joint] 左轮旋转关节, name=l_wheel_Joint, axis=Z轴, 驱动轮 -->
             <joint name="l_wheel_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <!-- [geom] 左轮碰撞/显示体, mesh=l_wheel_Link.STL -->
-            <geom type="mesh" rgba="1 1 1 1" mesh="l_wheel_Link"/>
+            <geom type="mesh" rgba="0.15 0.15 0.15 1" mesh="l_wheel_Link"/>
           </body>
         </body>
       </body>
@@ -347,7 +347,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
         <joint name="r20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
         <!-- [geom] 右后第1杆碰撞/显示体, mesh=r20_Link.STL -->
-        <geom type="mesh" rgba="1 1 1 1" mesh="r20_Link"/>
+        <geom type="mesh" rgba="0.80 0.70 0.20 1" mesh="r20_Link"/>
         <!-- [body] 右后四连杆第2杆, name=r21_Link, pos=第1杆向后0.093m+上移0.01m -->
         <body name="r21_Link" pos="-0.016285 -0.092933 0.01">
           <!-- [inertial] 右后第2杆惯性, mass=0.043kg -->
@@ -358,7 +358,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
           <!-- [joint] 右后第2杆关节, name=r21_Link(注意: 命名未用_Joint后缀, 保留原始数据) -->
           <joint name="r21_Link" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
           <!-- [geom] 右后第2杆碰撞/显示体, mesh=r21_Link.STL -->
-          <geom type="mesh" rgba="1 1 1 1" mesh="r21_Link"/>
+          <geom type="mesh" rgba="0.65 0.55 0.15 1" mesh="r21_Link"/>
           <!-- [body] 右后四连杆第3杆, name=r22_Link, pos=第2杆向前0.111m -->
           <body name="r22_Link" pos="0.11063 -0.019387 0">
             <!-- [inertial] 右后第3杆惯性, mass=0.066kg -->
@@ -369,7 +369,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
             <!-- [joint] 右后第3杆关节, name=r22_Joint -->
             <joint name="r22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <!-- [geom] 右后第3杆碰撞/显示体, mesh=r22_Link.STL -->
-            <geom type="mesh" rgba="1 1 1 1" mesh="r22_Link"/>
+            <geom type="mesh" rgba="0.50 0.45 0.10 1" mesh="r22_Link"/>
             <!-- [site] 右后上连接点(equality约束用), name=Right_rear_site1, 黄色 -->
             <site name="Right_rear_site1" pos="0 0.11232 0" size="0.005" rgba="1 1 0 1"/>
             <!-- [body] 右后四连杆第4杆(支撑臂), name=r23_Link, pos=第3杆向后0.018m+右移0.173m -->
@@ -382,7 +382,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
               <!-- [joint] 右后第4杆关节, name=r23_Joint -->
               <joint name="r23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
               <!-- [geom] 右后第4杆碰撞/显示体, mesh=r23_Link.STL -->
-              <geom type="mesh" rgba="1 1 1 1" mesh="r23_Link"/>
+              <geom type="mesh" rgba="0.40 0.35 0.05 1" mesh="r23_Link"/>
               <!-- [site] 右后下连接点(equality约束用), name=Right_rear_site2, 黄色 -->
               <site name="Right_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
             </body>
@@ -402,7 +402,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
         <joint name="l20_Joint" pos="0 0 0" axis="0 0 1"
                armature="0.00" actuatorfrcrange="-30 30"/>
         <!-- [geom] 左后第1杆碰撞/显示体, mesh=l20_Link.STL -->
-        <geom type="mesh" rgba="1 1 1 1" mesh="l20_Link"/>
+        <geom type="mesh" rgba="0.70 0.20 0.80 1" mesh="l20_Link"/>
         <!-- [body] 左后四连杆第2杆, name=l21_Link, pos=第1杆向后0.093m+上移0.01m -->
         <body name="l21_Link" pos="-0.016285 0.092933 0.01">
           <!-- [inertial] 左后第2杆惯性, mass=0.043kg -->
@@ -413,7 +413,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
           <!-- [joint] 左后第2杆关节, name=l21_Joint -->
           <joint name="l21_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
           <!-- [geom] 左后第2杆碰撞/显示体, mesh=l21_Link.STL -->
-          <geom type="mesh" rgba="1 1 1 1" mesh="l21_Link"/>
+          <geom type="mesh" rgba="0.55 0.15 0.65 1" mesh="l21_Link"/>
           <!-- [body] 左后四连杆第3杆, name=l22_Link, pos=第2杆向前0.111m -->
           <body name="l22_Link" pos="0.11063 0.019387 0">
             <!-- [inertial] 左后第3杆惯性, mass=0.066kg -->
@@ -424,7 +424,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
             <!-- [joint] 左后第3杆关节, name=l22_Joint -->
             <joint name="l22_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
             <!-- [geom] 左后第3杆碰撞/显示体, mesh=l22_Link.STL -->
-            <geom type="mesh" rgba="1 1 1 1" mesh="l22_Link"/>
+            <geom type="mesh" rgba="0.45 0.10 0.50 1" mesh="l22_Link"/>
             <!-- [site] 左后上连接点(equality约束用), name=Left_rear_site1, 黄色 -->
             <site name="Left_rear_site1" pos="0 -0.11232 0" size="0.005" rgba="1 1 0 1"/>
             <!-- [body] 左后四连杆第4杆(支撑臂), name=l23_Link, pos=第3杆向后0.018m+左移0.173m -->
@@ -437,7 +437,7 @@ base_Link_del（车身，freejoint 自由运动，挂载 IMU）
               <!-- [joint] 左后第4杆关节, name=l23_Joint -->
               <joint name="l23_Joint" pos="0 0 0" axis="0 0 1" actuatorfrcrange="-30 30"/>
               <!-- [geom] 左后第4杆碰撞/显示体, mesh=l23_Link.STL -->
-              <geom type="mesh" rgba="1 1 1 1" mesh="l23_Link"/>
+              <geom type="mesh" rgba="0.35 0.05 0.40 1" mesh="l23_Link"/>
               <!-- [site] 左后下连接点(equality约束用), name=Left_rear_site2, 黄色 -->
               <site name="Left_rear_site2" pos="0.08037 0 0" size="0.005" rgba="1 1 0 1"/>
             </body>

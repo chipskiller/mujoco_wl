@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include "C:\Conda\mujoco_wl\librm\src\librm.hpp"  // 机器人控制器接口头文件
+// #include "C:\Conda\mujoco_wl\librm\src\librm.hpp"  // 机器人控制器接口头文件
 
 // ================================================================
 //  传感器数据布局（与 mjmodel_lqr.xml 中 <sensor> 定义顺序一致）

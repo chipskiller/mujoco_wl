@@ -10,7 +10,7 @@ from Controller import *
 def main():
     
     TORQUE = 1  #为1时给力矩，为0是无力矩
-    SYNC_TIME = False # True=对齐真实世界时间, False=能跑多快跑多快
+    SYNC_TIME = True # True=对齐真实世界时间, False=能跑多快跑多快
     GBC486 = LegWheelRobot('MJCF/env.xml')
     dt = GBC486.model.opt.timestep      # 从模型读取真实步长 (0.001s)
     i = 0
