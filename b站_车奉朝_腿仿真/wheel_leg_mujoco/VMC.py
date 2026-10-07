@@ -227,24 +227,85 @@ class leg_VMC:
         self.last_d_theta = self.d_theta                       # 保存, 供下帧微分
 
     def vmc_calc_torque(self):
+        """
+        VMC 力矩解算 — 将脚端的虚拟力(F0, Tp)转为两个电机力矩
+
+        原理: 虚功原理  τ = J^T · F_virtual
+
+          雅可比矩阵 J 定义 (微分层面的映射):
+            ⎡ dL0 ⎤   ⎡ j11  j12 ⎤ ⎡ dφ1 ⎤
+            ⎢     ⎥ = ⎢          ⎥·⎢     ⎥     (φ1→L0/φ0 的灵敏度)
+            ⎣ dφ0 ⎦   ⎣ j21  j22 ⎦ ⎣ dφ4 ⎦
+
+          力矩输出 (J 的转置把虚拟力 "拉回" 到关节空间):
+            ⎡ τ_front(φ1电机) ⎤   ⎡ j11  j21 ⎤ ⎡ F0  ⎤
+            ⎢                 ⎥ = ⎢          ⎥·⎢     ⎥
+            ⎣ τ_rear (φ4电机) ⎦   ⎣ j12  j22 ⎦ ⎣ Tp  ⎦
+
+        虚拟力定义:
+          F0  — 径向虚拟力 (N), 沿 L0 方向 (腿伸缩方向)
+                正=F0把脚往底盘拉(收缩), 负=把脚往外推(伸长)
+          Tp  — 切向虚拟力矩 (Nm), 绕 C 点旋转方向
+                正=逆时针(脚相对车身往前摆), 负=顺时针(往后摆)
+
+        输出:
+          torque_set[1] = j11·F0 + j12·Tp  →  φ1 电机力矩 (Nm)
+          torque_set[0] = j21·F0 + j22·Tp  →  φ4 电机力矩 (Nm)
+        """
+
+        # ── 预计算: sin(φ3-φ2), 四个雅可比元素都要除它 ────
+        # φ3-φ2 趋近 0 或 ±π 时 sin→0 → 雅可比奇异 (两根等价杆共线)
         sin_phi3_phi2 = math.sin(self.phi3 - self.phi2)
 
+        # ========================================================
+        #  雅可比矩阵的四个元素
+        #
+        #  命名规则: j[行][列]
+        #    行 1 = d(L0)/d(·)   (腿长对电机角的偏导)
+        #    行 2 = d(φ0)/d(·)   (腿角度对电机角的偏导)
+        #    列 1 = d(·)/d(φ1)   (对前电机 φ1 的偏导)
+        #    列 2 = d(·)/d(φ4)   (对后电机 φ4 的偏导)
+        #
+        #  结论: j11/j21 由前摇臂(φ1,l1)产生
+        #        j12/j22 由后摇臂(φ4,l4)产生
+        # ========================================================
 
-        # 计算j11
-        self.j11 = (self.l1 * math.sin(self.phi0 - self.phi3) * 
+        # j11 = ∂L0/∂φ1: 前电机 φ1 转 1rad 引起腿长 L0 变化多少米
+        #   = l1 · sin(φ0-φ3) · sin(φ1-φ2) / sin(φ3-φ2)
+        #   分子: l1 是前摇臂长, sin(φ0-φ3) 把 DC 杆方向投影到 L0 径向
+        #         sin(φ1-φ2) 把 φ1 的转动投影到 BC 杆的弯曲
+        self.j11 = (self.l1 * math.sin(self.phi0 - self.phi3) *
                    math.sin(self.phi1 - self.phi2)) / sin_phi3_phi2
-        
-        
-        self.j12 = (self.l1 * math.cos(self.phi0 - self.phi3) * 
-                   math.sin(self.phi1 - self.phi2)) / (self.L0 * sin_phi3_phi2)
-        
-        self.j21 = (self.l4 * math.sin(self.phi0 - self.phi2) * 
-                   math.sin(self.phi3 - self.phi4)) / sin_phi3_phi2
-        
-        self.j22 = (self.l4 * math.cos(self.phi0 - self.phi2) * 
-                   math.sin(self.phi3 - self.phi4)) / (self.L0 * sin_phi3_phi2)
-        
-        self.torque_set[1] = self.j11 * self.F0 + self.j12 * self.Tp
-        self.torque_set[0] = self.j21 * self.F0 + self.j22 * self.Tp
 
-    #Tp：扭转力；F0：支持力
+        # j12 = ∂φ0/∂φ1: 前电机 φ1 转 1rad 引起腿角度 φ0 变化多少 rad
+        #   = l1 · cos(φ0-φ3) · sin(φ1-φ2) / (L0 · sin(φ3-φ2))
+        #   cos(φ0-φ3) 把 DC 杆方向投影到 φ0 切向 (垂直 L0 方向)
+        #   除以 L0 是因为角位移 = 线位移 / 半径
+        self.j12 = (self.l1 * math.cos(self.phi0 - self.phi3) *
+                   math.sin(self.phi1 - self.phi2)) / (self.L0 * sin_phi3_phi2)
+
+        # j21 = ∂L0/∂φ4: 后电机 φ4 转 1rad 引起腿长 L0 变化多少米
+        #   = l4 · sin(φ0-φ2) · sin(φ3-φ4) / sin(φ3-φ2)
+        #   对称于 j11, 但用的是后摇臂 l4 和 φ4
+        self.j21 = (self.l4 * math.sin(self.phi0 - self.phi2) *
+                   math.sin(self.phi3 - self.phi4)) / sin_phi3_phi2
+
+        # j22 = ∂φ0/∂φ4: 后电机 φ4 转 1rad 引起腿角度 φ0 变化多少 rad
+        #   = l4 · cos(φ0-φ2) · sin(φ3-φ4) / (L0 · sin(φ3-φ2))
+        #   对称于 j12, 但用的是后摇臂 l4 和 φ4
+        self.j22 = (self.l4 * math.cos(self.phi0 - self.phi2) *
+                   math.sin(self.phi3 - self.phi4)) / (self.L0 * sin_phi3_phi2)
+
+        # ========================================================
+        #  虚功原理: τ = J^T · F_virtual
+        #
+        #    脚端虚拟力 F_virtual = [F0, Tp]^T  (2×1)
+        #    雅可比转置    J^T    = [[j11, j21],  (2×2)^T
+        #                            [j12, j22]]
+        #    关节力矩        τ     = [τ_front, τ_rear]^T  (2×1)
+        #
+        #  torque_set[1] = τ_front (φ1 电机, 前摇臂)
+        #  torque_set[0] = τ_rear  (φ4 电机, 后摇臂)
+        # ========================================================
+        self.torque_set[1] = self.j11 * self.F0 + self.j12 * self.Tp   # 前电机力矩
+        self.torque_set[0] = self.j21 * self.F0 + self.j22 * self.Tp   # 后电机力矩
