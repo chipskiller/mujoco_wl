@@ -1,3 +1,6 @@
 [submodule "librm"]
 	path = librm
 	url = https://github.com/XDU-IRobot/librm.git
+[submodule "RM2024_Reborn_LegWheel_Chassis"]
+	path = RM2024_Reborn_LegWheel_Chassis
+	url = https://github.com/JerryGong0911/RM2024_Reborn_LegWheel_Chassis.git
