@@ -7,7 +7,7 @@ m = 0.5;
 l = 0.3;
 g = 9.81;
 
-wheel_damping = 1e-4;
+wheel_damping = 0;
 joint_damping = 1e-5;
 
 %% cart-pole initial condition
