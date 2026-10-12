@@ -13,7 +13,7 @@ joint_damping = 1e-5;
 %% cart-pole initial condition
 x_0 = 0;
 y_0 = 0.15;
-q_0 = 10; %degree
+q_0 = 30; %degree
 
 %% controller
 LQR = 1;

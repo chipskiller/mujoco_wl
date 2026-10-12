@@ -13,7 +13,7 @@ D = 0;
 cartpole = ss(A,B,C,D);
 
 %%LQR
-Q = diag([1000 20 0 500]);%x q dx dq
+Q = diag([100 300 50 100]);%x q dx dq
 R = 200;%fx
 K = lqr(cartpole,Q,R)
 
