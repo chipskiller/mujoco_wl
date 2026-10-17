@@ -124,42 +124,82 @@ Ja_num = subs(Ja, [g, m_b, m_w, R_w, ...], [9.81, 8.4, 0.322, 0.077, ...]);
 
 ---
 
-## 7. MATLAB 符号变量是值复制，不是引用
+## 7. 三条语句的顺序导致 Jb 第 2、4 行全零
 
-### Bug：Jb 第 2、4 行全零
+### 关键概念
 
-#### 现象
-
-`Jb = jacobian(dot_x, u)` 结果中，对应 s̈ 和 φ̈ 的行（第 2、4 行）对控制量 `T_w, T_b` 的偏导全是 0。但上交文档中 `b_{2,j}` 和 `b_{4,j}` 明确非零。
-
-#### 根因
+在 MATLAB 中，符号变量的赋值是**快照（snapshot）**，不是引用。当你写：
 
 ```matlab
-% L80: dot_x 组装时，ddot_s 还是裸符号（不含 T_w）
-dot_x = [dot_s, ddot_s, dot_phi, ddot_phi, ...];  % ← 拍照了旧 ddot_s
-
-% L83: 重定义 ddot_s（此时用了 solve 后的 ddot_θ，含 T_w）
-ddot_s = 0.5*R_w * (ddot_theta_w_l + ddot_theta_w_r);  % ← dot_x 不会自动更新！
+a = x;        % a 拍下 x 当前的值
+x = x + 1;    % x 变了
+               % a 不会跟着变！
 ```
 
-MATLAB 符号赋值是**快照**：`dot_x` 记录的是组装那一刻 `ddot_s` 的值，后面重定义 `ddot_s` 不会触发 `dot_x` 更新。
+`a` 存的是赋值那一刻 `x` 的拷贝，之后 `x` 怎么变都与 `a` 无关。同样地，`dot_x = [..., ddot_s, ...]` 拍下的是此刻 `ddot_s` 的值，后面重定义 `ddot_s` 不会触发 `dot_x` 自动更新。
 
-#### 修复
+---
+
+### 现象
+
+`Jb = jacobian(dot_x, u)` 中，第 2 行（对应 s̈）和第 4 行（对应 φ̈）对 `T_w_l, T_w_r, T_b_l, T_b_r` 的偏导全是 0。但上交文档中 `b_{2,j}` 和 `b_{4,j}` 明确非零。
+
+---
+
+### 根因
+
+原始代码中有两次"拍照过早"：
 
 ```matlab
-% 1. solve
+% ═══ 第 1 次拍早：ddot_s / ddot_phi 定义在 solve 之前 ═══
+% L16: syms ddot_s;        → ddot_s = 裸符号, 不含任何变量关系
+% L17: syms ddot_phi;      → ddot_phi = 裸符号
+%
+% L79: [ddot_θ_w_l, ...] = solve(equ1~equ5, ...);
+%       → solve 覆盖了 ddot_θ_w_l 等，把它们变成了含 T_w, T_b, θ 的表达式
+%       → 但 ddot_s 还是裸符号！
+%
+% ═══ 第 2 次拍早：dot_x 拼装 —— 此时 ddot_s 还是裸符号 ═══
+% L80: dot_x = [dot_s, ddot_s, dot_phi, ddot_phi, ...];
+%       → dot_x(2) 拍下的是裸符号 ddot_s，而不是 solve 相关表达式
+%
+% L82: ddot_s   = 0.5*R_w*(ddot_θ_w_l + ddot_θ_w_r);  ← 晚了！dot_x 不会更新
+% L83: ddot_phi = ...;                                 ← 晚了！dot_x 不会更新
+```
+
+代入数字来理解：
+
+| 时刻 | `ddot_s` 的真实值 | `dot_x(2)` 拍下的值 |
+|------|-------------------|---------------------|
+| syms 声明后 | `ddot_s`（裸符号） | — |
+| solve 后 | `ddot_s`（裸符号，没变） | — |
+| `ddot_s = f(ddot_θ)` | `0.5*R_w*(solve输出₁ + solve输出₂)` ← 含 T_w | `ddot_s`（裸符号，没更新）|
+
+jacobian 对 `dot_x(2)`（裸符号 ddot_s）求 ∂/∂T_w = **0**，因为裸符号跟 T_w 没有任何关系。
+
+---
+
+### 修复：三步换序
+
+```matlab
+% ① 先 solve —— 此时 ddot_θ 变成含 T_w, T_b, θ 的表达式
 [ddot_θ_w_l, ddot_θ_w_r, ddot_θ_l_l, ddot_θ_l_r, ddot_θ_b] = solve([equ1~equ5], [...]);
-% 2. 定义 s̈ 和 φ̈（solve 之后！）
-ddot_s   = 0.5*R_w*(ddot_θ_w_l + ddot_θ_w_r);
-ddot_phi = 0.5*R_w/R_l*(-ddot_θ_w_l + ddot_θ_w_r) - 0.5*l_l/R_l*ddot_θ_l_l + 0.5*l_r/R_l*ddot_θ_l_r;
-% 3. 组装 dot_x（最后！）
+
+% ② 再定义 s̈ 和 φ̈ —— 此时 ddot_θ 已是 solve 输出，表达式含 T_w, T_b
+ddot_s   = 0.5*R_w * (ddot_θ_w_l + ddot_θ_w_r);
+ddot_phi = 0.5*R_w/R_l * (-ddot_θ_w_l + ddot_θ_w_r) - ...;
+
+% ③ 最后拼装 dot_x —— 拍下的是"含 T_w/T_b"的新 ddot_s
 dot_x = [dot_s, ddot_s, dot_phi, ddot_phi, dot_θ_l_l, ddot_θ_l_l, dot_θ_l_r, ddot_θ_l_r, dot_θ_b, ddot_θ_b];
-% 4. jacobian
+
+% ④ jacobian
 Ja = jacobian(dot_x, x);
-Jb = jacobian(dot_x, u);
+Jb = jacobian(dot_x, u);    % ← 现在 ∂ddot_s/∂T_w ≠ 0 ✅
 ```
 
-**顺序必须是：solve → ddot_s/ddot_phi → dot_x → jacobian。**
+修复后，`dot_x(2)` 存的是 `0.5*R_w*(solve输出₁ + solve输出₂)`，这个表达式显含 T_w、T_b，j jacobian 求偏导就能得到正确非零值。
+
+**一句话：solve → ddot_s/ddot_phi → dot_x → jacobian，四步必须严格按这个顺序。**
 
 ---
 
