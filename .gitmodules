@@ -4,3 +4,9 @@
 [submodule "RM2024_Reborn_LegWheel_Chassis"]
 	path = RM2024_Reborn_LegWheel_Chassis
 	url = https://github.com/JerryGong0911/RM2024_Reborn_LegWheel_Chassis.git
+[submodule "matlab-"]
+	path = matlab-
+	url = https://github.com/chipskiller/matlab-.git
+[submodule "sjtu-wl-lqr-matlab"]
+	path = sjtu-wl-lqr-matlab
+	url = https://github.com/chipskiller/sjtu-wl-lqr-matlab.git
