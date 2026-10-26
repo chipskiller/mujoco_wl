@@ -196,6 +196,7 @@ class leg_VMC:
         # 注意: 第一次调用时没有上一帧值, 设 first_flag 跳过微分
         if self.first_flag == 0:
             self.last_phi0 = self.phi0
+            self.last_L0   = self.L0      # 否则首帧 d_L0 = L0/dt (几百 m/s), F0 爆表
             self.first_flag = 1
 
         self.d_phi0  = (self.phi0 - self.last_phi0) / dt     # φ0 的一阶导数 (rad/s)

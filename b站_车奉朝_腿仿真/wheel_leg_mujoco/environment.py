@@ -13,9 +13,9 @@ class LegWheelRobot:
         self.model = mujoco.MjModel.from_xml_path(model_path)
         self.data = mujoco.MjData(self.model)
 
-        self.sensor_T = 0.001
+        self.sensor_T = 0.0005          # 与 env.xml 的 timestep 一致 (每步读一次传感器)
         self.sensor_f = 1/self.sensor_T 
-        self.wheel_r = 0.77
+        self.wheel_r = 0.077
 
         self.gyro = []
         self.accel = []
@@ -66,7 +66,7 @@ class LegWheelRobot:
         self.last_right_wheel_pos = self.right_wheel_pos
         self.last_left_wheel_pos = self.left_wheel_pos
         
-        self.d_x = (self.wheel_vel[0] + self.wheel_vel[1]) * 0.5 * 2*math.pi*self.wheel_r / 60
+        self.d_x = (self.wheel_vel[0] + self.wheel_vel[1]) * 0.5 * self.wheel_r
         self.x = self.x + self.d_x*self.sensor_T
 
         # 右前关节位置
