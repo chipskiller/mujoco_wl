@@ -10,3 +10,6 @@
 [submodule "sjtu-wl-lqr-matlab"]
 	path = sjtu-wl-lqr-matlab
 	url = https://github.com/chipskiller/sjtu-wl-lqr-matlab.git
+[submodule "RP_Balance"]
+	path = RP_Balance
+	url = https://github.com/WilliamGwok/RP_Balance.git
