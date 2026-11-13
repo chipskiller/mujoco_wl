@@ -13,3 +13,6 @@
 [submodule "RP_Balance"]
 	path = RP_Balance
 	url = https://github.com/WilliamGwok/RP_Balance.git
+[submodule "WBR_simulation"]
+	path = WBR_simulation
+	url = https://github.com/Particlela/WBR_simulation.git
